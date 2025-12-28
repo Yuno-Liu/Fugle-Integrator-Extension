@@ -1420,6 +1420,23 @@
                 border-color: var(--fugle-primary);
                 transform: translateY(-1px);
             }
+
+            /* Sticky Headers for Fixed Mode (Ported from Popup) */
+            #stock-info-card.fixed-mode #info-header {
+                position: sticky;
+                top: 0;
+                background-color: var(--fugle-card-bg);
+                z-index: 20;
+                margin-top: -16px;
+                padding-top: 16px;
+                border-bottom: 1px solid var(--fugle-border);
+            }
+            #stock-info-card.fixed-mode .section-header {
+                position: sticky;
+                top: 74px;
+                background-color: var(--fugle-card-bg);
+                z-index: 15;
+            }
         `;
         document.head.appendChild(style);
     }
