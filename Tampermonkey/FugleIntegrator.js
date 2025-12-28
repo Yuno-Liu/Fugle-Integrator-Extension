@@ -72,6 +72,9 @@
 
         // 📦 ETF 持股數據 (findbillion)
         etfHolding: (id) => `https://www.findbillion.com/api/strategy/v2/strategy/etf_hold_reverse/?stock_country=tw&stock_symbol=${id}`,
+
+        // 🏭 產能分析數據 (工廠位置、規格、數量、單位)
+        capacity: (id) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/28/97/4b/twstockdata.xdjjson?x=Stock-Basic0008-1&a=${id}.TW`,
     };
 
     /**
@@ -118,7 +121,7 @@
 
         try {
             // 第一批：個股相關數據（較小、較快）
-            const [industries, concepts, groups, basicData, ratingData, etfHoldingData] = await Promise.all([fetchV2(API_URLS.industry(stockId)), fetchV2(API_URLS.concept(stockId)), fetchV2(API_URLS.group(stockId)), fetchResult(API_URLS.basic(stockId)), fetchResult(API_URLS.ratings(stockId)), fetchETFHolding(API_URLS.etfHolding(stockId))]);
+            const [industries, concepts, groups, basicData, ratingData, etfHoldingData, capacityData] = await Promise.all([fetchV2(API_URLS.industry(stockId)), fetchV2(API_URLS.concept(stockId)), fetchV2(API_URLS.group(stockId)), fetchResult(API_URLS.basic(stockId)), fetchResult(API_URLS.ratings(stockId)), fetchETFHolding(API_URLS.etfHolding(stockId)), fetchResult(API_URLS.capacity(stockId))]);
 
             // 檢查頁面是否已切換（避免渲染過時數據）
             const currentStockId = document.querySelector(".card-group-header__info__symbol")?.textContent?.trim();
@@ -311,6 +314,46 @@
 
             const etfHoldingHtml = createETFHoldingHtml(etfHoldingData);
 
+            /**
+             * 🏭 生成產能分析 HTML
+             */
+            const createCapacityHtml = (capacityList) => {
+                if (!capacityList || capacityList.length === 0) return null;
+
+                // 生成產能表格
+                const capacityRows = capacityList
+                    .map((item) => {
+                        const location = item.V1 || "-";
+                        const spec = item.V2 || "-";
+                        const quantity = item.V3 || "-";
+                        const unit = item.V4 || "";
+
+                        return `<tr style="border-bottom: 1px dashed #333; font-size: 14px;">
+                            <td style="color: #e67e22; padding: 4px 8px 4px 0;">${location}</td>
+                            <td style="color: #fff; padding: 4px 8px;">${spec}</td>
+                            <td style="color: #3498db; font-weight: 600; padding: 4px 8px; text-align: right;">${quantity}</td>
+                            <td style="color: #888; padding: 4px 0 4px 8px;">${unit}</td>
+                        </tr>`;
+                    })
+                    .join("");
+
+                return `<table style="margin-top: 4px; border-collapse: collapse; width: 100%;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #444; font-size: 11px; color: #666;">
+                            <th style="padding: 4px 8px 4px 0; text-align: left; font-weight: normal;">📍 位置</th>
+                            <th style="padding: 4px 8px; text-align: left; font-weight: normal;">📋 規格</th>
+                            <th style="padding: 4px 8px; text-align: right; font-weight: normal;">📊 數量</th>
+                            <th style="padding: 4px 0 4px 8px; text-align: left; font-weight: normal;">📐 單位</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${capacityRows}
+                    </tbody>
+                </table>`;
+            };
+
+            const capacityHtml = createCapacityHtml(capacityData);
+
             // --- 💰 財務數據格式化 ---
 
             // 格式化金額為「億」或「兆」
@@ -357,6 +400,54 @@
                     </div>`;
             };
 
+            // 讀取各區塊的折疊狀態
+            const getSectionState = (key) => localStorage.getItem(`fugle-section-${key}`) !== "false";
+
+            // 輔助函式：生成可折疊區塊 HTML
+            const createSection = (id, title, emoji, content, defaultOpen = true) => {
+                if (!content) return "";
+                const storedState = localStorage.getItem(`fugle-section-${id}`);
+                const actualOpen = storedState === null ? defaultOpen : storedState !== "false";
+                return `
+                    <div class="info-section collapsible-section" data-section-id="${id}">
+                        <div class="section-header" style="cursor: pointer; display: flex; align-items: center; margin-bottom: ${actualOpen ? "8px" : "0"};">
+                            <span style="font-weight: 600; color: #aaa;">${emoji} ${title}</span>
+                            <span class="section-toggle" style="margin-left: auto; font-size: 10px; color: #666; transition: 0.2s;">${actualOpen ? "△" : "▽"}</span>
+                        </div>
+                        <div class="section-body" style="display: ${actualOpen ? "block" : "none"};">
+                            ${content}
+                        </div>
+                    </div>`;
+            };
+
+            // 組合各區塊內容
+            const ratingContent = ratingHtml ? `<div class="info-row"><div class="info-content">${ratingHtml}</div></div>` : null;
+
+            const financeContent = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        ${createLine("🏗️", "估值", `BVPS ${nav?.toFixed(2)} ｜ PB ${pb?.toFixed(2)}<br>EPS ${eps?.toFixed(2)} ｜ PE ${pe?.toFixed(2)}`, "#2ecc71", true)}
+                        ${createLine("💰", "股利", `殖利率 ${dy?.toFixed(2)}%`, "#ff7f50", true)}
+                    </div>
+                    <div>
+                        ${createLine("📈", "股本", formattedCapital, "#d4b38c", true)}
+                        ${createLine("🪙", "市值", marketCap, "#ffd700", true)}
+                    </div>
+                    <div>
+                        ${createLine("📊", "獲利", `毛利 ${margin?.toFixed(2)}% <br> ROE ${roe?.toFixed(2)}% ｜ ROA ${roa?.toFixed(2)}%`, "#f1c40f", true)}
+                    </div>
+                </div>`;
+
+            const relationContent = [createLine("🤝", "集團", groups.join(" ｜ "), "#ec3b61", true), createLine("💎", "策略", allianceHtml, "#f78fb3", true), createLine("🚚", "供應商", supplierHtml, "#45aaf2"), createLine("🛒", "客戶", customerHtml, "#a55eea"), createLine("⚔️", "對手", rivalHtml, "#fc5c65")].filter(Boolean).join("") || null;
+
+            const investContent = [createLine("💸", "轉投資", outHtml, "#ff9f43", true), createLine("🛡️", "被投資", inHtml, "#4ecdc4", true)].filter(Boolean).join("") || null;
+
+            const etfContent = etfHoldingHtml ? `<div class="info-row"><div class="info-content" style="color: #7289da; font-weight: 600;">${etfHoldingHtml}</div></div>` : null;
+
+            const basicContent = [createLine("💵", "營收", info.V5, "#a17de0ff", true), createLine("🏢", "產業", industries.join(" ｜ "), "#76a1fc"), createLine("💡", "概念", concepts.join(" ｜ "), "#67ccac")].filter(Boolean).join("") || null;
+
+            const capacityContent = capacityHtml ? `<div class="info-row"><div class="info-content" style="color: #e67e22; font-weight: 600;">${capacityHtml}</div></div>` : null;
+
             // 組合卡片 HTML
             infoDiv.innerHTML = `
                 <div id="info-header" style="cursor: pointer; margin-bottom: ${isCollapsed ? "0" : "12px"}; border-bottom: ${isCollapsed ? "none" : "1px solid #333"}; padding-bottom: ${isCollapsed ? "0" : "10px"}; display: flex; align-items: center;">
@@ -367,43 +458,13 @@
                     <span id="toggle-icon" style="margin-left: auto; font-size: 12px; color: var(--fugle-primary); background: #2d2d2d; padding: 4px 10px; border-radius: 20px; border: 1px solid #444; transition: 0.2s;">${isCollapsed ? "展開詳情 ▽" : "收起詳情 △"}</span>
                 </div>
                 <div id="info-body" style="display: ${isCollapsed ? "none" : "block"};">
-                    <div class="info-section">
-                        ${createLine("🎯", "機構評等", ratingHtml)}
-                    </div>
-                    <div class="info-section">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <div>
-                                ${createLine("🏗️", "估值", `BVPS ${nav?.toFixed(2)} ｜ PB ${pb?.toFixed(2)}<br>EPS ${eps?.toFixed(2)} ｜ PE ${pe?.toFixed(2)}`, "#2ecc71", true)}
-                                ${createLine("💰", "股利", `殖利率 ${dy?.toFixed(2)}%`, "#ff7f50", true)}
-                            </div>
-                            <div>
-                                ${createLine("📈", "股本", formattedCapital, "#d4b38c", true)}
-                                ${createLine("🪙", "市值", marketCap, "#ffd700", true)}
-                            </div>
-                            <div>
-                                ${createLine("📊", "獲利", `毛利 ${margin?.toFixed(2)}% <br> ROE ${roe?.toFixed(2)}% ｜ ROA ${roa?.toFixed(2)}%`, "#f1c40f", true)}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="info-section">
-                        ${createLine("🤝", "集團", groups.join(" ｜ "), "#ec3b61", true)}
-                        ${createLine("💎", "策略", allianceHtml, "#f78fb3", true)}
-                        ${createLine("🚚", "供應商", supplierHtml, "#45aaf2")}
-                        ${createLine("🛒", "客戶", customerHtml, "#a55eea")}
-                        ${createLine("⚔️", "對手", rivalHtml, "#fc5c65")}
-                    </div>
-                    <div class="info-section">
-                        ${createLine("💸", "轉投資", outHtml, "#ff9f43", true)}
-                        ${createLine("🛡️", "被投資", inHtml, "#4ecdc4", true)}
-                    </div>
-                    <div class="info-section">
-                        ${createLine("📦", "ETF持股", etfHoldingHtml, "#7289da", true)}
-                    </div>
-                    <div class="info-section" style="border-bottom: none;">
-                        ${createLine("💵", "營收", info.V5, "#a17de0ff", true)}
-                        ${createLine("🏢", "產業", industries.join(" ｜ "), "#76a1fc")}
-                        ${createLine("💡", "概念", concepts.join(" ｜ "), "#67ccac")}
-                    </div>
+                    ${createSection("rating", "機構評等", "🎯", ratingContent, true)}
+                    ${createSection("finance", "財務指標", "💹", financeContent, true)}
+                    ${createSection("relation", "關係企業", "🔗", relationContent, true)}
+                    ${createSection("invest", "投資佈局", "💼", investContent, false)}
+                    ${createSection("etf", "ETF 持股", "📦", etfContent, false)}
+                    ${createSection("basic", "基本資料", "📝", basicContent, false)}
+                    ${createSection("capacity", "產能分析", "🏭", capacityContent, false)}
                 </div>
             `;
 
@@ -425,6 +486,23 @@
                 header.style.borderBottom = currentlyCollapsed ? "1px solid #444" : "none";
                 icon.textContent = currentlyCollapsed ? "收起 △" : "展開 ▽";
                 localStorage.setItem("fugle-info-collapsed", !currentlyCollapsed);
+            });
+
+            // 綁定各區塊的折疊事件
+            infoDiv.querySelectorAll(".collapsible-section").forEach((section) => {
+                const sectionHeader = section.querySelector(".section-header");
+                const sectionBody = section.querySelector(".section-body");
+                const sectionToggle = section.querySelector(".section-toggle");
+                const sectionId = section.dataset.sectionId;
+
+                sectionHeader.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const isOpen = sectionBody.style.display !== "none";
+                    sectionBody.style.display = isOpen ? "none" : "block";
+                    sectionHeader.style.marginBottom = isOpen ? "0" : "8px";
+                    sectionToggle.textContent = isOpen ? "▽" : "△";
+                    localStorage.setItem(`fugle-section-${sectionId}`, !isOpen);
+                });
             });
 
             // 注入關係鏈樣式
@@ -724,6 +802,7 @@
                     #toggle-icon { display: none !important; }
                     #info-body { display: block !important; }
                     #info-header { pointer-events: none; border-bottom: 1px solid #333 !important; padding-bottom: 10px !important; margin-bottom: 12px !important; }
+                    .section-header { cursor: pointer; }
                 </style>
             </head>
             <body>
@@ -734,6 +813,24 @@
             </html>
         `);
         w.document.close();
+
+        // 綁定彈出視窗中各區塊的折疊事件
+        w.document.querySelectorAll(".collapsible-section").forEach((section) => {
+            const sectionHeader = section.querySelector(".section-header");
+            const sectionBody = section.querySelector(".section-body");
+            const sectionToggle = section.querySelector(".section-toggle");
+            const sectionId = section.dataset.sectionId;
+
+            sectionHeader.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const isOpen = sectionBody.style.display !== "none";
+                sectionBody.style.display = isOpen ? "none" : "block";
+                sectionHeader.style.marginBottom = isOpen ? "0" : "8px";
+                sectionToggle.textContent = isOpen ? "▽" : "△";
+                // 同步到父視窗的 localStorage
+                localStorage.setItem(`fugle-section-${sectionId}`, !isOpen);
+            });
+        });
 
         // 從父視窗綁定子視窗的點擊事件（繞過 CSP 限制）
         w.document.addEventListener("click", (e) => {
