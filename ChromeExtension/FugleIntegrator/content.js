@@ -185,7 +185,7 @@
                         const isTW = /(.TW|.TE|.TT)$/.test(item.id);
                         const cleanId = item.id.replace(/\.(TW|TE|TT)/, "");
                         // 如果是台股則生成連結，否則僅顯示文字
-                        return isTW ? `<a href="https://www.fugle.tw/ai/${cleanId}" target="_blank" class="${className}">${item.name}(${cleanId})</a>` : `<span style="opacity: 0.8;">${item.name}(${cleanId})</span>`;
+                        return isTW ? `<a href="/ai/${cleanId}" class="${className}">${item.name}(${cleanId})</a>` : `<span style="opacity: 0.8;">${item.name}(${cleanId})</span>`;
                     })
                     .join('<span style="color: #444; margin: 0 4px;">•</span>');
             };
@@ -710,6 +710,27 @@
     }
 
     // --- 🚀 初始化監聽器 ---
+
+    // 監聽點擊事件以實現 SPA 轉跳
+    document.addEventListener("click", (e) => {
+        const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link");
+        if (link && link.tagName === "A") {
+            e.preventDefault();
+            const href = link.getAttribute("href");
+            if (href) {
+                // 使用 pushState 改變 URL 但不重新整理頁面
+                history.pushState({}, "", href);
+                // 觸發 popstate 事件讓 Angular 路由偵測到變化
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                // 立即更新 lastUrl 並觸發重新渲染邏輯
+                if (location.href !== lastUrl) {
+                    lastUrl = location.href;
+                    setTimeout(initIntegration, 500);
+                }
+            }
+        }
+    });
+
     // 由於 Fugle 是 SPA (單頁應用)，使用定時器監控 URL 變化來觸發重新渲染
     setInterval(() => {
         if (location.href !== lastUrl) {
