@@ -14,10 +14,33 @@
 
     // 儲存最後一次的 URL，用於偵測頁面跳轉（富果是 SPA）
     let lastUrl = location.href;
+    // 儲存最後處理的股票代碼，避免重複渲染相同股票
+    let lastStockId = null;
     // 渲染鎖定開關，防止重複觸發 API 請求
     let isFetching = false;
     // 儲存彈出視窗引用
     let popupWindow = null;
+    // 防抖動計時器
+    let debounceTimer = null;
+    // 請求超時時間 (毫秒)
+    const FETCH_TIMEOUT = 8000;
+    // 防抖動延遲 (毫秒)
+    const DEBOUNCE_DELAY = 500;
+    // 全市場數據緩存 (避免重複請求大量數據)
+    let marketDataCache = null;
+    // 緩存過期時間 (30 分鐘)
+    const CACHE_TTL = 30 * 60 * 1000;
+    let cacheTimestamp = 0;
+
+    /**
+     * 🔧 防抖動函式：避免短時間內重複觸發
+     */
+    const debounce = (fn, delay) => {
+        return (...args) => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => fn(...args), delay);
+        };
+    };
 
     // --- 🛠️ API 配置：定義外部數據源路徑 ---
     const API_URLS = {
@@ -51,7 +74,7 @@
     /**
      * 🚀 初始化整合器：從富果頁面 DOM 抓取當前股票資訊並觸發渲染
      */
-    const initIntegration = () => {
+    const initIntegration = (forceRefresh = false) => {
         // 抓取股票代號、價格、市場類型、名稱等資訊
         const stockId = document.querySelector(".card-group-header__info__symbol")?.textContent?.trim();
         const price = document.querySelector(".card-group-header__price__price")?.textContent?.trim();
@@ -59,11 +82,22 @@
         const stockName = document.querySelector(".stock-name")?.textContent?.trim();
         const container = document.querySelector(".card-group-header__upper-left");
 
-        // 如果沒抓到代號或正在請求中，則跳過
-        if (!stockId || isFetching) return;
+        // 如果沒抓到代號則跳過
+        if (!stockId) return;
+
+        // 如果股票代碼相同且非強制刷新，則跳過（避免重複渲染）
+        if (stockId === lastStockId && !forceRefresh && document.querySelector("#stock-info-card")) return;
+
+        // 如果正在請求中，設定防抖動延遲後重試
+        if (isFetching) {
+            debounce(() => initIntegration(forceRefresh), DEBOUNCE_DELAY)();
+            return;
+        }
+
+        // 更新最後處理的股票代碼
+        lastStockId = stockId;
 
         // 清除舊有的 UI 元素，避免重複顯示
-        // document.querySelectorAll('#stock-info-card').forEach(el => el.remove());
         document.querySelectorAll("#custom-btn-group").forEach((el) => el.remove());
 
         // 插入自定義按鈕選單與渲染詳細資訊卡片
@@ -75,31 +109,51 @@
      * 🌐 核心邏輯：併行請求所有外部數據並生成專業 UI 卡片
      */
     async function fetchAndRenderInfo(stockId, market, price, stockName) {
-        isFetching = true; // 開啟請求鎖定
+        // 防止重複請求
+        if (isFetching) return;
+        isFetching = true;
 
         try {
-            // ⚡ 使用 Promise.all 併行抓取所有需要的數據，提升載入速度
-            const [industries, concepts, groups, basicData, suppliers, customers, rivals, alliances, ratingData, investOuts, investIns, allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs] = await Promise.all([
-                fetchV2(API_URLS.industry(stockId)),
-                fetchV2(API_URLS.concept(stockId)),
-                fetchV2(API_URLS.group(stockId)),
-                fetchResult(API_URLS.basic(stockId)),
+            // 第一批：個股相關數據（較小、較快）
+            const [industries, concepts, groups, basicData, ratingData] = await Promise.all([fetchV2(API_URLS.industry(stockId)), fetchV2(API_URLS.concept(stockId)), fetchV2(API_URLS.group(stockId)), fetchResult(API_URLS.basic(stockId)), fetchResult(API_URLS.ratings(stockId))]);
+
+            // 檢查頁面是否已切換（避免渲染過時數據）
+            const currentStockId = document.querySelector(".card-group-header__info__symbol")?.textContent?.trim();
+            if (currentStockId !== stockId) {
+                isFetching = false;
+                return;
+            }
+
+            // 第二批：關係企業數據
+            const [suppliers, customers, rivals, alliances, investOuts, investIns] = await Promise.all([
                 fetchStockRelation(API_URLS.relation(stockId, 0)),
                 fetchStockRelation(API_URLS.relation(stockId, 1)),
                 fetchStockRelation(API_URLS.relation(stockId, 2)),
                 fetchStockRelation(API_URLS.relation(stockId, 3)),
-                fetchResult(API_URLS.ratings(stockId)), // 🎯 機構評等
                 fetchStockRelation(API_URLS.relation(stockId, 4)),
                 fetchStockRelation(API_URLS.relation(stockId, 5)),
-                fetchResult(API_URLS.netValueList),
-                fetchResult(API_URLS.pbRatioList),
-                fetchResult(API_URLS.epsList),
-                fetchResult(API_URLS.peRatioList),
-                fetchResult(API_URLS.yieldList),
-                fetchResult(API_URLS.marginList),
-                fetchResult(API_URLS.roeList),
-                fetchResult(API_URLS.roaList),
             ]);
+
+            // 再次檢查頁面是否已切換
+            const currentStockId2 = document.querySelector(".card-group-header__info__symbol")?.textContent?.trim();
+            if (currentStockId2 !== stockId) {
+                isFetching = false;
+                return;
+            }
+
+            // 第三批：全市場數據（使用緩存）
+            let allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs;
+
+            const now = Date.now();
+            if (marketDataCache && now - cacheTimestamp < CACHE_TTL) {
+                // 使用緩存
+                ({ allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs } = marketDataCache);
+            } else {
+                // 重新請求並緩存
+                [allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs] = await Promise.all([fetchResult(API_URLS.netValueList), fetchResult(API_URLS.pbRatioList), fetchResult(API_URLS.epsList), fetchResult(API_URLS.peRatioList), fetchResult(API_URLS.yieldList), fetchResult(API_URLS.marginList), fetchResult(API_URLS.roeList), fetchResult(API_URLS.roaList)]);
+                marketDataCache = { allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs };
+                cacheTimestamp = now;
+            }
 
             const targetHeader = document.querySelector(".card-group-header");
             if (!targetHeader || !basicData.length) {
@@ -339,12 +393,14 @@
 
     /**
      * 🌐 網路請求封裝 (V2)：處理 esunsec 的 JSONP/JSON 格式，僅返回 V2 欄位清單
+     * 加入超時機制避免請求永久掛起
      */
     function fetchV2(url) {
         return new Promise((resolve) => {
             GM_xmlhttpRequest({
                 method: "GET",
                 url: url,
+                timeout: FETCH_TIMEOUT,
                 onload: (res) => {
                     try {
                         resolve(JSON.parse(res.responseText).ResultSet.Result.map((i) => i.V2));
@@ -353,18 +409,24 @@
                     }
                 },
                 onerror: () => resolve([]),
+                ontimeout: () => {
+                    console.warn("Fetch timeout for:", url);
+                    resolve([]);
+                },
             });
         });
     }
 
     /**
      * 🤝 網路請求封裝 (關係企業)：處理特定的關係鏈數據，返回去重後的 {id, name} 物件
+     * 加入超時機制避免請求永久掛起
      */
     function fetchStockRelation(url) {
         return new Promise((resolve) => {
             GM_xmlhttpRequest({
                 method: "GET",
                 url: url,
+                timeout: FETCH_TIMEOUT,
                 onload: (res) => {
                     try {
                         const raw = JSON.parse(res.responseText).ResultSet.Result;
@@ -382,18 +444,24 @@
                     }
                 },
                 onerror: () => resolve([]),
+                ontimeout: () => {
+                    console.warn("Fetch timeout for:", url);
+                    resolve([]);
+                },
             });
         });
     }
 
     /**
      * 📄 網路請求封裝 (原始結果)：直接返回 API 的 Result 陣列
+     * 加入超時機制避免請求永久掛起
      */
     function fetchResult(url) {
         return new Promise((resolve) => {
             GM_xmlhttpRequest({
                 method: "GET",
                 url: url,
+                timeout: FETCH_TIMEOUT,
                 onload: (res) => {
                     try {
                         resolve(JSON.parse(res.responseText).ResultSet.Result);
@@ -402,6 +470,10 @@
                     }
                 },
                 onerror: () => resolve([]),
+                ontimeout: () => {
+                    console.warn("Fetch timeout for:", url);
+                    resolve([]);
+                },
             });
         });
     }
@@ -746,32 +818,65 @@
     // 監聽點擊事件以實現 SPA 轉跳
     document.addEventListener("click", (e) => {
         const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link");
-        if (link && link.tagName === "A") {
+        if (link?.tagName === "A") {
             e.preventDefault();
             const href = link.getAttribute("href");
             if (href) {
-                // 使用 pushState 改變 URL 但不重新整理頁面
                 history.pushState({}, "", href);
-                // 觸發 popstate 事件讓 Angular 路由偵測到變化
                 window.dispatchEvent(new PopStateEvent("popstate"));
-                // 立即更新 lastUrl 並觸發重新渲染邏輯
                 if (location.href !== lastUrl) {
                     lastUrl = location.href;
-                    setTimeout(initIntegration, 500);
+                    lastStockId = null;
+                    debouncedInit();
                 }
             }
         }
     });
 
-    // 由於 Fugle 是 SPA (單頁應用)，使用定時器監控 URL 變化來觸發重新渲染
-    setInterval(() => {
+    // 使用防抖動的初始化
+    const debouncedInit = debounce(initIntegration, DEBOUNCE_DELAY);
+
+    // 定期檢查 URL 變化（使用較長間隔減少 CPU 使用）
+    let urlCheckInterval = null;
+    const startUrlCheck = () => {
+        if (urlCheckInterval) return;
+        urlCheckInterval = setInterval(() => {
+            if (location.href !== lastUrl) {
+                lastUrl = location.href;
+                lastStockId = null;
+                debouncedInit();
+            }
+        }, 1000);
+    };
+
+    // 監聽 popstate 事件以處理瀏覽器的返回/前進按鈕
+    window.addEventListener("popstate", () => {
         if (location.href !== lastUrl) {
             lastUrl = location.href;
-            // 延遲執行以確保 DOM 已加載
-            setTimeout(initIntegration, 500);
+            lastStockId = null;
+            debouncedInit();
         }
-    }, 1000);
+    });
+
+    // 監聽頁面可見性變化，暫停/恢復 URL 檢查
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            if (urlCheckInterval) {
+                clearInterval(urlCheckInterval);
+                urlCheckInterval = null;
+            }
+        } else {
+            startUrlCheck();
+            // 頁面重新可見時檢查一次
+            if (location.href !== lastUrl) {
+                lastUrl = location.href;
+                lastStockId = null;
+                debouncedInit();
+            }
+        }
+    });
 
     // 首次載入執行
-    setTimeout(initIntegration, 1500);
+    startUrlCheck();
+    setTimeout(initIntegration, 800);
 })();
