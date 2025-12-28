@@ -570,6 +570,26 @@
             </html>
         `);
         w.document.close();
+
+        // 從父視窗綁定子視窗的點擊事件（繞過 CSP 限制）
+        w.document.addEventListener("click", (e) => {
+            const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link");
+            if (link && link.tagName === "A") {
+                e.preventDefault();
+                const href = link.getAttribute("href");
+                if (href) {
+                    // 透過父視窗執行 SPA 導航
+                    history.pushState({}, "", href);
+                    window.dispatchEvent(new PopStateEvent("popstate"));
+                    // 更新 lastUrl 並觸發重新渲染
+                    if (location.href !== lastUrl) {
+                        lastUrl = location.href;
+                        setTimeout(initIntegration, 500);
+                    }
+                    window.focus();
+                }
+            }
+        });
     }
 
     /**
