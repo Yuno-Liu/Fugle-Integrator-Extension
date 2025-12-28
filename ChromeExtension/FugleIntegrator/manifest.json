@@ -1,0 +1,18 @@
+{
+    "manifest_version": 3,
+    "name": "富果整合器 - 產業鏈全視圖",
+    "version": "1.0",
+    "description": "整合富果頁面，自動抓取產業鏈、機構評等、財務指標等外部數據並優化 UI 顯示",
+    "permissions": [],
+    "host_permissions": ["https://sjis.esunsec.com.tw/*", "https://www.fugle.tw/*"],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://www.fugle.tw/*"],
+            "js": ["content.js"],
+            "run_at": "document_idle"
+        }
+    ]
+}
