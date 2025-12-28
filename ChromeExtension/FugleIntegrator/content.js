@@ -756,7 +756,211 @@
     }
 
     /**
-     * 🛠️ 輔助工具：生成外部分析工具按鈕組
+     * � 處理搜尋功能
+     */
+    async function handleSearch() {
+        // 確保資料庫已加載
+        if (!stockDatabase) {
+            const btn = document.querySelector("button.custom-analysis-btn"); // 假設搜尋按鈕是第一個
+            const originalText = btn ? btn.textContent : "🔍 搜尋";
+            if (btn && btn.textContent.includes("搜尋")) btn.textContent = "載入中...";
+            await loadStockDatabase();
+            if (btn) btn.textContent = originalText;
+        }
+        createSearchModal();
+    }
+
+    /**
+     * 🪟 建立搜尋視窗
+     */
+    function createSearchModal() {
+        // 如果已存在則移除
+        const existing = document.getElementById("fugle-search-modal");
+        if (existing) existing.remove();
+
+        const modal = document.createElement("div");
+        modal.id = "fugle-search-modal";
+        modal.innerHTML = `
+            <div class="search-modal-content">
+                <div class="search-header">
+                    <span style="font-size: 18px; font-weight: bold;">🔍 搜尋概念股/產業/集團</span>
+                    <span class="close-btn" style="cursor: pointer; font-size: 24px;">×</span>
+                </div>
+                <div class="search-body">
+                    <input type="text" id="category-search-input" placeholder="輸入關鍵字 (例如: AI, 半導體, 台積電集團)..." autofocus>
+                    <div id="search-results"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // 綁定關閉事件
+        modal.querySelector(".close-btn").onclick = () => modal.remove();
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.remove();
+        };
+
+        const input = modal.querySelector("#category-search-input");
+        const resultsContainer = modal.querySelector("#search-results");
+
+        // 自動聚焦
+        setTimeout(() => input.focus(), 100);
+
+        // 搜尋邏輯
+        input.addEventListener("input", (e) => {
+            const keyword = e.target.value.trim().toLowerCase();
+            if (!keyword) {
+                resultsContainer.innerHTML = "";
+                return;
+            }
+
+            const categories = stockDatabase?.categories || [];
+            const basicInfo = stockDatabase?.basicInfo || [];
+
+            // 1. 搜尋分類
+            const matchedCategories = categories
+                .filter((c) => c.分類名稱.toLowerCase().includes(keyword))
+                .reduce((acc, curr) => {
+                    const key = `${curr.分類類型}-${curr.分類名稱}`;
+                    if (!acc.has(key)) {
+                        acc.set(key, { type: curr.分類類型, name: curr.分類名稱, kind: "category" });
+                    }
+                    return acc;
+                }, new Map());
+
+            // 2. 搜尋個股
+            const matchedStocks = basicInfo
+                .filter((s) => s.股票代碼.includes(keyword) || s.股票名稱.toLowerCase().includes(keyword))
+                .slice(0, 20) // 限制顯示數量
+                .map((s) => ({
+                    type: "個股",
+                    name: `${s.股票名稱} (${s.股票代碼})`,
+                    code: s.股票代碼,
+                    kind: "stock",
+                }));
+
+            const categoryResults = Array.from(matchedCategories.values());
+            const allResults = [...matchedStocks, ...categoryResults];
+
+            if (allResults.length === 0) {
+                resultsContainer.innerHTML = `<div style="padding: 10px; color: #888;">找不到相關結果</div>`;
+                return;
+            }
+
+            resultsContainer.innerHTML = allResults
+                .map((r) => {
+                    if (r.kind === "stock") {
+                        return `
+                        <div class="search-result-item stock-item" data-code="${r.code}">
+                            <span class="result-tag tag-stock">個股</span>
+                            <span class="result-name">${r.name}</span>
+                        </div>
+                    `;
+                    } else {
+                        return `
+                        <div class="search-result-item category-item" data-type="${r.type}" data-name="${r.name}">
+                            <span class="result-tag ${r.type === "概念" ? "tag-concept" : r.type === "產業" ? "tag-industry" : "tag-group"}">${r.type}</span>
+                            <span class="result-name">${r.name}</span>
+                        </div>
+                    `;
+                    }
+                })
+                .join("");
+
+            // 綁定分類點擊事件
+            resultsContainer.querySelectorAll(".category-item").forEach((item) => {
+                item.addEventListener("click", () => {
+                    const type = item.dataset.type;
+                    const name = item.dataset.name;
+                    showCategoryStocksInModal(type, name, resultsContainer);
+                });
+            });
+
+            // 綁定個股點擊事件
+            resultsContainer.querySelectorAll(".stock-item").forEach((item) => {
+                item.addEventListener("click", () => {
+                    const code = item.dataset.code;
+                    // 跳轉到個股頁面
+                    const href = `/ai/${code}`;
+                    history.pushState({}, "", href);
+                    window.dispatchEvent(new PopStateEvent("popstate"));
+                    document.getElementById("fugle-search-modal").remove(); // 關閉視窗
+
+                    // 觸發更新
+                    if (location.href !== lastUrl) {
+                        lastUrl = location.href;
+                        lastStockId = null;
+                        setTimeout(initIntegration, 500);
+                    }
+                });
+            });
+        });
+    }
+
+    /**
+     * 📋 在搜尋視窗中顯示分類股票
+     */
+    function showCategoryStocksInModal(type, name, container) {
+        const stocks = getRelatedStocks(name, type);
+
+        const html = `
+            <div style="margin-bottom: 10px;">
+                <button class="back-btn" style="background:none; border:none; color:#aaa; cursor:pointer; padding:0; margin-bottom:8px; font-size: 14px;">← 返回搜尋結果</button>
+                <div style="font-size: 16px; font-weight: bold; color: #fff; display: flex; align-items: center;">
+                    <span class="result-tag ${type === "概念" ? "tag-concept" : type === "產業" ? "tag-industry" : "tag-group"}" style="margin-right: 8px;">${type}</span>
+                    ${name} (${stocks.length})
+                </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                ${stocks
+                    .map(
+                        (s) => `
+                    <a href="/ai/${s.code}" class="stock-chip">
+                        <span style="font-weight:bold;">${s.code}</span> ${s.name}
+                    </a>
+                `
+                    )
+                    .join("")}
+            </div>
+        `;
+
+        // 保存當前的搜尋結果 HTML 以便返回
+        // 注意：這裡我們不保存 innerHTML，因為事件監聽器會丟失。
+        // 相反，我們重新執行搜尋邏輯或隱藏/顯示。
+        // 簡單起見，我們重新觸發 input event 來恢復列表，或者簡單地重新渲染列表。
+        // 這裡採用簡單的重新渲染方式：
+        const input = document.getElementById("category-search-input");
+        const currentKeyword = input.value;
+
+        container.innerHTML = html;
+
+        // 綁定返回按鈕
+        container.querySelector(".back-btn").addEventListener("click", () => {
+            // 觸發 input 事件以重新渲染搜尋結果
+            input.dispatchEvent(new Event("input"));
+        });
+
+        // 綁定股票點擊 (SPA 跳轉)
+        container.querySelectorAll(".stock-chip").forEach((link) => {
+            link.addEventListener("click", (e) => {
+                e.preventDefault();
+                const href = link.getAttribute("href");
+                history.pushState({}, "", href);
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                document.getElementById("fugle-search-modal").remove(); // 關閉視窗
+
+                // 觸發更新
+                if (location.href !== lastUrl) {
+                    lastUrl = location.href;
+                    lastStockId = null;
+                    setTimeout(initIntegration, 500);
+                }
+            });
+        });
+    }
+
+    /**
+     * �🛠️ 輔助工具：生成外部分析工具按鈕組
      */
     function insertButtonMenu(container, stockId, market, stockName) {
         if (!container || document.querySelector("#custom-btn-group")) return;
@@ -766,6 +970,7 @@
 
         // 定義按鈕清單與對應的 URL 生成邏輯
         const links = [
+            { name: "� 搜尋", val: "search" },
             { name: "📈 WantGoo", val: "wantgoo" },
             { name: "💬 CMoney", val: "cmoney" },
             { name: "📊 TV", val: "tvse" },
@@ -779,6 +984,10 @@
             btn.textContent = link.name;
             btn.className = "custom-analysis-btn";
             btn.onclick = () => {
+                if (link.val === "search") {
+                    handleSearch();
+                    return;
+                }
                 let url = "";
                 if (link.val === "wantgoo") url = `https://www.wantgoo.com/stock/${stockId}`;
                 if (link.val === "cmoney") url = `https://www.cmoney.tw/forum/stock/${stockId}`;
@@ -1106,6 +1315,111 @@
             .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
             input:checked + .slider { background-color: var(--fugle-primary); }
             input:checked + .slider:before { transform: translateX(16px); }
+
+            /* Search Modal Styles */
+            #fugle-search-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 10000;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                padding-top: 100px;
+                backdrop-filter: blur(2px);
+            }
+            .search-modal-content {
+                background: #252526;
+                width: 500px;
+                max-width: 90%;
+                border-radius: 8px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                border: 1px solid #444;
+                display: flex;
+                flex-direction: column;
+                max-height: 80vh;
+            }
+            .search-header {
+                padding: 16px;
+                border-bottom: 1px solid #333;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                color: #fff;
+            }
+            .close-btn {
+                font-size: 24px;
+                cursor: pointer;
+                color: #888;
+                transition: color 0.2s;
+            }
+            .close-btn:hover { color: #fff; }
+            .search-body {
+                padding: 16px;
+                overflow-y: auto;
+            }
+            #category-search-input {
+                width: 100%;
+                padding: 10px;
+                background: #1e1e1e;
+                border: 1px solid #444;
+                border-radius: 4px;
+                color: #fff;
+                font-size: 16px;
+                margin-bottom: 16px;
+                box-sizing: border-box;
+            }
+            #category-search-input:focus {
+                outline: none;
+                border-color: var(--fugle-primary);
+            }
+            .search-result-item {
+                padding: 10px;
+                border-bottom: 1px solid #333;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                transition: background 0.2s;
+            }
+            .search-result-item:hover {
+                background: #333;
+            }
+            .result-tag {
+                font-size: 12px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                margin-right: 10px;
+                font-weight: bold;
+                white-space: nowrap;
+            }
+            .tag-concept { background: rgba(82, 196, 26, 0.2); color: #52c41a; }
+            .tag-industry { background: rgba(69, 170, 242, 0.2); color: #45aaf2; }
+            .tag-group { background: rgba(236, 59, 97, 0.2); color: #ec3b61; }
+            .tag-stock { background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555; }
+            .result-name {
+                color: #d4d4d4;
+                font-size: 14px;
+            }
+            .stock-chip {
+                display: inline-block;
+                background: #333;
+                color: #d4d4d4;
+                padding: 6px 12px;
+                border-radius: 20px;
+                text-decoration: none;
+                font-size: 13px;
+                border: 1px solid #444;
+                transition: all 0.2s;
+            }
+            .stock-chip:hover {
+                background: var(--fugle-primary);
+                color: #fff;
+                border-color: var(--fugle-primary);
+                transform: translateY(-1px);
+            }
         `;
         document.head.appendChild(style);
     }
