@@ -31,6 +31,8 @@
     // 緩存過期時間 (30 分鐘)
     const CACHE_TTL = 30 * 60 * 1000;
     let cacheTimestamp = 0;
+    // 本地 JSON 資料庫（概念股、產業、集團）
+    let stockDatabase = null;
 
     /**
      * 🔧 防抖動函式：避免短時間內重複觸發
@@ -41,6 +43,69 @@
             debounceTimer = setTimeout(() => fn(...args), delay);
         };
     };
+
+    /**
+     * 📚 初始化本地 JSON 資料庫（來自 stock-data.js）
+     */
+    function loadStockDatabase() {
+        if (!stockDatabase && typeof STOCK_DATA !== "undefined") {
+            stockDatabase = STOCK_DATA;
+            console.log("✅ Stock database loaded:", stockDatabase.basicInfo.length, "stocks,", stockDatabase.categories.length, "categories");
+        }
+        return stockDatabase;
+    }
+
+    /**
+     * 🔍 查詢該股票所屬的概念股/產業/集團
+     * @param {string} stockId - 股票代碼
+     * @param {string} categoryType - 查詢類型: "概念", "產業", "集團"
+     * @returns {string[]} 相關分類清單
+     */
+    function getStockCategories(stockId, categoryType) {
+        if (!stockDatabase) return [];
+
+        const categories = stockDatabase.categories || [];
+        const matching = categories.filter((cat) => cat.股票代碼 === stockId && cat.分類類型 === categoryType);
+
+        return matching.map((cat) => cat.分類名稱).filter((v, i, a) => a.indexOf(v) === i); // 去重
+    }
+
+    /**
+     * 🔍 查詢同分類的相關股票
+     * @param {string} categoryName - 分類名稱 (如 "AI", "半導體" 等)
+     * @param {string} categoryType - 分類類型: "概念", "產業", "集團"
+     * @param {number} limit - 最多返回幾筆記錄 (可選)
+     * @returns {Object[]} 相關股票清單 [{code, name}]
+     */
+    function getRelatedStocks(categoryName, categoryType, limit = null) {
+        if (!stockDatabase) return [];
+
+        const categories = stockDatabase.categories || [];
+        const basicInfo = stockDatabase.basicInfo || [];
+
+        const stockIds = categories.filter((cat) => cat.分類類型 === categoryType && cat.分類名稱 === categoryName).map((cat) => cat.股票代碼);
+
+        // 去重並限制數量
+        let unique = [...new Set(stockIds)];
+        if (limit) unique = unique.slice(0, limit);
+
+        // 取得股票名稱
+        return unique
+            .map((id) => {
+                const info = basicInfo.find((b) => b.股票代碼 === id);
+                return { code: id, name: info?.股票名稱 || "未知" };
+            })
+            .filter((v) => v.name !== "未知");
+    }
+
+    /**
+     * 🏢 生成可點擊的相關股票 HTML
+     */
+    function createRelatedStocksHtml(stocks, className = "relation-link") {
+        if (!stocks || stocks.length === 0) return "";
+
+        return stocks.map((stock) => `<a class="${className}" href="/ai/${stock.code}">${stock.name}(${stock.code})</a>`).join('<span style="color: #444; margin: 0 4px;">•</span>');
+    }
 
     // --- 🛠️ API 配置：定義外部數據源路徑 ---
     const API_URLS = {
@@ -120,6 +185,9 @@
         isFetching = true;
 
         try {
+            // 加載本地 JSON 資料庫（概念股、產業、集團）
+            loadStockDatabase();
+
             // 第一批：個股相關數據（較小、較快）
             const [industries, concepts, groups, basicData, ratingData, etfHoldingData, capacityData] = await Promise.all([fetchV2(API_URLS.industry(stockId)), fetchV2(API_URLS.concept(stockId)), fetchV2(API_URLS.group(stockId)), fetchResult(API_URLS.basic(stockId)), fetchResult(API_URLS.ratings(stockId)), fetchETFHolding(API_URLS.etfHolding(stockId)), fetchResult(API_URLS.capacity(stockId))]);
 
@@ -444,22 +512,56 @@
 
             const etfContent = etfHoldingHtml ? `<div class="info-row"><div class="info-content" style="color: #7289da; font-weight: 600;">${etfHoldingHtml}</div></div>` : null;
 
+            // 📚 從本地資料庫查詢相關股票
+            const dbConceptCategories = getStockCategories(stockId, "概念");
+            const dbIndustryCategories = getStockCategories(stockId, "產業");
+            const dbGroupCategories = getStockCategories(stockId, "集團");
+
+            // 合併 API 抓取的分類與本地資料庫的分類
+            const allConceptCategories = [...new Set([...dbConceptCategories, ...concepts])];
+            const allIndustryCategories = [...new Set([...dbIndustryCategories, ...industries])];
+            const allGroupCategories = [...new Set([...dbGroupCategories, ...groups])];
+
+            // 生成相關股票 HTML
+            let relatedConceptHtml = "";
+            let relatedIndustryHtml = "";
+            let relatedGroupHtml = "";
+
+            if (allConceptCategories.length > 0) {
+                relatedConceptHtml = allConceptCategories.map((cat) => `<div><span style="color: #67ccac; font-weight: 600;">${cat}</span>：${createRelatedStocksHtml(getRelatedStocks(cat, "概念"), "concept-link")}</div>`).join("");
+            }
+
+            if (allIndustryCategories.length > 0) {
+                relatedIndustryHtml = allIndustryCategories.map((cat) => `<div><span style="color: #76a1fc; font-weight: 600;">${cat}</span>：${createRelatedStocksHtml(getRelatedStocks(cat, "產業"), "industry-link")}</div>`).join("");
+            }
+
+            if (allGroupCategories.length > 0) {
+                relatedGroupHtml = allGroupCategories.map((cat) => `<div><span style="color: #ec3b61; font-weight: 600;">${cat}</span>：${createRelatedStocksHtml(getRelatedStocks(cat, "集團"), "group-link")}</div>`).join("");
+            }
+
+            const relatedContent = [createLine("🔗", "同概念", relatedConceptHtml), createLine("🏭", "同產業", relatedIndustryHtml), createLine("🤝", "同集團", relatedGroupHtml)].filter(Boolean).join("") || null;
+
             const basicContent = [createLine("💵", "營收", info.V5, "#a17de0ff", true), createLine("🏢", "產業", industries.join(" ｜ "), "#76a1fc"), createLine("💡", "概念", concepts.join(" ｜ "), "#67ccac")].filter(Boolean).join("") || null;
 
             const capacityContent = capacityHtml ? `<div class="info-row"><div class="info-content" style="color: #e67e22; font-weight: 600;">${capacityHtml}</div></div>` : null;
 
             // 組合卡片 HTML
             infoDiv.innerHTML = `
-                <div id="info-header" style="cursor: pointer; margin-bottom: ${isCollapsed ? "0" : "12px"}; border-bottom: ${isCollapsed ? "none" : "1px solid #333"}; padding-bottom: ${isCollapsed ? "0" : "10px"}; display: flex; align-items: center;">
+                <div id="info-header" style="cursor: pointer; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 10px; display: flex; align-items: center;">
                     <div style="display: flex; flex-direction: column;">
                         <span style="font-size: 16px; font-weight: bold; color: #fff;">${info.V1}</span>
                         <span style="color: var(--fugle-text-muted); font-size: 12px;">📅 ${info.V16} ｜ ${market}</span>
                     </div>
                     <span id="toggle-icon" style="margin-left: auto; font-size: 12px; color: var(--fugle-primary); background: #2d2d2d; padding: 4px 10px; border-radius: 20px; border: 1px solid #444; transition: 0.2s;">${isCollapsed ? "展開詳情 ▽" : "收起詳情 △"}</span>
                 </div>
+                <div id="info-summary" style="display: ${isCollapsed ? "block" : "none"};">
+                    ${ratingSummary || ""}
+                    ${financeContent || ""}
+                </div>
                 <div id="info-body" style="display: ${isCollapsed ? "none" : "block"};">
                     ${createSection("rating", "機構評等", "🎯", ratingContent, true)}
                     ${createSection("finance", "財務指標", "💹", financeContent, true)}
+                    ${createSection("related", "相關個股", "🔍", relatedContent, true)}
                     ${createSection("relation", "關係企業", "🔗", relationContent, true)}
                     ${createSection("invest", "投資佈局", "💼", investContent, false)}
                     ${createSection("etf", "ETF 持股", "📦", etfContent, false)}
@@ -479,13 +581,25 @@
             // 綁定收合事件
             const header = infoDiv.querySelector("#info-header");
             const body = infoDiv.querySelector("#info-body");
+            const summary = infoDiv.querySelector("#info-summary");
             const icon = infoDiv.querySelector("#toggle-icon");
+
             header.addEventListener("click", () => {
                 const currentlyCollapsed = body.style.display === "none";
-                body.style.display = currentlyCollapsed ? "block" : "none";
-                header.style.borderBottom = currentlyCollapsed ? "1px solid #444" : "none";
-                icon.textContent = currentlyCollapsed ? "收起 △" : "展開 ▽";
-                localStorage.setItem("fugle-info-collapsed", !currentlyCollapsed);
+                // 切換顯示狀態
+                if (currentlyCollapsed) {
+                    // 展開：顯示完整內容，隱藏摘要
+                    body.style.display = "block";
+                    summary.style.display = "none";
+                    icon.textContent = "收起詳情 △";
+                    localStorage.setItem("fugle-info-collapsed", "false");
+                } else {
+                    // 收起：隱藏完整內容，顯示摘要
+                    body.style.display = "none";
+                    summary.style.display = "block";
+                    icon.textContent = "展開詳情 ▽";
+                    localStorage.setItem("fugle-info-collapsed", "true");
+                }
             });
 
             // 綁定各區塊的折疊事件
@@ -801,8 +915,28 @@
                     /* Force expand and hide toggle in popup */
                     #toggle-icon { display: none !important; }
                     #info-body { display: block !important; }
-                    #info-header { pointer-events: none; border-bottom: 1px solid #333 !important; padding-bottom: 10px !important; margin-bottom: 12px !important; }
-                    .section-header { cursor: pointer; }
+                    #info-summary { display: none !important; }
+                    #info-header { 
+                        pointer-events: none; 
+                        border-bottom: 1px solid #333 !important; 
+                        padding-bottom: 10px !important; 
+                        margin-bottom: 12px !important;
+                        position: sticky !important;
+                        top: 0;
+                        background-color: #252526;
+                        z-index: 999;
+                        margin-top: -16px !important;
+                        padding-top: 16px !important;
+                    }
+                    .section-header { 
+                        cursor: pointer;
+                        position: sticky;
+                        top: 75px;
+                        background-color: #252526;
+                        z-index: 998;
+                        padding: 8px 0;
+                        border-bottom: 1px solid #333;
+                    }
                 </style>
             </head>
             <body>
@@ -834,7 +968,7 @@
 
         // 從父視窗綁定子視窗的點擊事件（繞過 CSP 限制）
         w.document.addEventListener("click", (e) => {
-            const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link");
+            const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link, .concept-link, .industry-link, .group-link");
             if (link && link.tagName === "A") {
                 e.preventDefault();
                 const href = link.getAttribute("href");
@@ -979,7 +1113,7 @@
         const style = document.createElement("style");
         style.id = "chain-link-style";
         style.textContent = `
-            .sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; transition: 0.2s; }
+            .sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link, .relation-link, .concept-link, .industry-link, .group-link { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; transition: 0.2s; }
             .sup-link { color: #45aaf2; } .sup-link:hover { color: #2d98da; text-decoration-style: solid; }
             .cus-link { color: #a55eea; } .cus-link:hover { color: #8854d0; text-decoration-style: solid; }
             .riv-link { color: #fc5c65; } .riv-link:hover { color: #eb3b5a; text-decoration-style: solid; }
@@ -987,6 +1121,10 @@
             .out-link { color: #ff9f43; } .out-link:hover { color: #f7b731; text-decoration-style: solid; }
             .in-link { color: #4ecdc4; } .in-link:hover { color: #26dead; text-decoration-style: solid; }
             .etf-link { color: #7289da; } .etf-link:hover { color: #5b6eae; text-decoration-style: solid; }
+            .relation-link { color: #52c41a; } .relation-link:hover { color: #389e0d; text-decoration-style: solid; }
+            .concept-link { color: #52c41a; } .concept-link:hover { color: #389e0d; text-decoration-style: solid; }
+            .industry-link { color: #45aaf2; } .industry-link:hover { color: #2d98da; text-decoration-style: solid; }
+            .group-link { color: #f78fb3; } .group-link:hover { color: #cf6a87; text-decoration-style: solid; }
         `;
         document.head.appendChild(style);
     }
@@ -995,7 +1133,7 @@
 
     // 監聽點擊事件以實現 SPA 轉跳
     document.addEventListener("click", (e) => {
-        const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link");
+        const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link, .relation-link, .concept-link, .industry-link, .group-link");
         if (link?.tagName === "A") {
             e.preventDefault();
             const href = link.getAttribute("href");

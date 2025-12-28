@@ -5,6 +5,12 @@
     "description": "整合富果頁面，自動抓取產業鏈、機構評等、財務指標等外部數據並優化 UI 顯示",
     "permissions": [],
     "host_permissions": ["https://sjis.esunsec.com.tw/*", "https://www.fugle.tw/*", "https://www.findbillion.com/*"],
+    "web_accessible_resources": [
+        {
+            "resources": ["stock-data.json"],
+            "matches": ["https://www.fugle.tw/*"]
+        }
+    ],
     "background": {
         "service_worker": "background.js"
     },
