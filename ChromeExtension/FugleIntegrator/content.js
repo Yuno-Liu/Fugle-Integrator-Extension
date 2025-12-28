@@ -576,13 +576,13 @@
                     ${financeContent || ""}
                 </div>
                 <div id="info-body" style="display: ${isCollapsed ? "none" : "block"};">
-                    ${createSection("rating", "機構評等", "🎯", ratingContent, true)}
-                    ${createSection("finance", "財務指標", "💹", financeContent, true)}
-                    ${createSection("related", "相關個股", "🔍", relatedContent, true)}
+                    ${createSection("basic", "基本資料", "📝", basicContent, true)}
                     ${createSection("relation", "關係企業", "🔗", relationContent, true)}
                     ${createSection("invest", "投資佈局", "💼", investContent, false)}
+                    ${createSection("rating", "機構評等", "🎯", ratingContent, true)}
                     ${createSection("etf", "ETF 持股", "📦", etfContent, false)}
-                    ${createSection("basic", "基本資料", "📝", basicContent, false)}
+                    ${createSection("finance", "財務指標", "💹", financeContent, true)}
+                    ${createSection("related", "相關個股", "🔍", relatedContent, true)}
                     ${createSection("capacity", "產能分析", "🏭", capacityContent, false)}
                 </div>
             `;
