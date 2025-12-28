@@ -69,6 +69,9 @@
         marginList: `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/94/36/d5/twstockdata.xdjjson?x=stock-basic0001a&a=5`, // 毛利率
         roeList: `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/4f/88/14/twstockdata.xdjjson?x=stock-basic0001a&a=7`, // ROE
         roaList: `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/5b/b4/ce/twstockdata.xdjjson?x=stock-basic0001a&a=6`, // ROA
+
+        // 📦 ETF 持股數據 (findbillion)
+        etfHolding: (id) => `https://www.findbillion.com/api/strategy/v2/strategy/etf_hold_reverse/?stock_country=tw&stock_symbol=${id}`,
     };
 
     /**
@@ -115,7 +118,7 @@
 
         try {
             // 第一批：個股相關數據（較小、較快）
-            const [industries, concepts, groups, basicData, ratingData] = await Promise.all([fetchV2(API_URLS.industry(stockId)), fetchV2(API_URLS.concept(stockId)), fetchV2(API_URLS.group(stockId)), fetchResult(API_URLS.basic(stockId)), fetchResult(API_URLS.ratings(stockId))]);
+            const [industries, concepts, groups, basicData, ratingData, etfHoldingData] = await Promise.all([fetchV2(API_URLS.industry(stockId)), fetchV2(API_URLS.concept(stockId)), fetchV2(API_URLS.group(stockId)), fetchResult(API_URLS.basic(stockId)), fetchResult(API_URLS.ratings(stockId)), fetchETFHolding(API_URLS.etfHolding(stockId))]);
 
             // 檢查頁面是否已切換（避免渲染過時數據）
             const currentStockId = document.querySelector(".card-group-header__info__symbol")?.textContent?.trim();
@@ -262,6 +265,52 @@
             const outHtml = createLinkList(investOuts, "out-link");
             const inHtml = createLinkList(investIns, "in-link");
 
+            /**
+             * 📦 生成 ETF 持股列表 HTML
+             */
+            const createETFHoldingHtml = (etfList) => {
+                if (!etfList || etfList.length === 0) return null;
+
+                // 按持股數量排序（由大到小）
+                const sortedList = [...etfList].sort((a, b) => (b.stock_holding_stocknum || 0) - (a.stock_holding_stocknum || 0));
+
+                // 計算總持股數量和總占比
+                const totalHolding = sortedList.reduce((sum, etf) => sum + (etf.stock_holding_stocknum || 0), 0);
+                const totalRatio = sortedList.reduce((sum, etf) => sum + (etf.stock_holding_ratio || 0), 0);
+
+                // 格式化持股張數（1張 = 1000股）
+                const formatShares = (num) => {
+                    const shares = num / 1000; // 轉換為張數
+                    if (shares >= 10000) return (shares / 10000).toFixed(2) + " 萬張";
+                    if (shares >= 1) return shares.toFixed(0).toLocaleString() + " 張";
+                    return "< 1 張";
+                };
+
+                // 統計摘要
+                const summary = `<div style="margin-bottom: 8px; padding: 8px; background: rgba(114, 137, 218, 0.1); border-radius: 6px; border: 1px dashed #7289da;">
+                    <span style="color: #7289da; font-weight: bold;">📦 共 ${sortedList.length} 檔 ETF 持股：</span>
+                    <span style="color: #fff;">合計 ${formatShares(totalHolding)}</span>
+                    <span style="color: #7289da;">(占比加總 ${totalRatio.toFixed(2)}%)</span>
+                </div>`;
+
+                // 生成 ETF 持股列表
+                const etfItems = sortedList
+                    .slice(0, 15) // 最多顯示 15 筆
+                    .map((etf) => {
+                        const symbol = etf.symbol;
+                        const name = etf.name || symbol;
+                        const ratio = etf.stock_holding_ratio?.toFixed(2) || "0.00";
+                        const shares = formatShares(etf.stock_holding_stocknum || 0);
+
+                        return `<a href="/ai/${symbol}" class="etf-link"><span style="font-weight: 600;">${symbol}</span> ${name} <span style="color: #7289da;">${ratio}%</span> <span style="color: #888; font-size: 11px;">${shares}</span></a>`;
+                    })
+                    .join('<span style="color: #444; margin: 0 4px;">•</span>');
+
+                return summary + `<div style="display: flex; flex-wrap: wrap; gap: 4px;">${etfItems}</div>` + (sortedList.length > 15 ? `<div style="color: #888; font-size: 11px; margin-top: 4px;">...還有 ${sortedList.length - 15} 檔 ETF</div>` : "");
+            };
+
+            const etfHoldingHtml = createETFHoldingHtml(etfHoldingData);
+
             // --- 💰 財務數據格式化 ---
 
             // 格式化金額為「億」或「兆」
@@ -346,6 +395,9 @@
                     <div class="info-section">
                         ${createLine("💸", "轉投資", outHtml, "#ff9f43", true)}
                         ${createLine("🛡️", "被投資", inHtml, "#4ecdc4", true)}
+                    </div>
+                    <div class="info-section">
+                        ${createLine("📦", "ETF持股", etfHoldingHtml, "#7289da", true)}
                     </div>
                     <div class="info-section" style="border-bottom: none;">
                         ${createLine("💵", "營收", info.V5, "#a17de0ff", true)}
@@ -465,6 +517,34 @@
                 onload: (res) => {
                     try {
                         resolve(JSON.parse(res.responseText).ResultSet.Result);
+                    } catch {
+                        resolve([]);
+                    }
+                },
+                onerror: () => resolve([]),
+                ontimeout: () => {
+                    console.warn("Fetch timeout for:", url);
+                    resolve([]);
+                },
+            });
+        });
+    }
+
+    /**
+     * 📦 網路請求封裝 (ETF 持股)：處理 findbillion API，返回 ETF 持股清單
+     * 加入超時機制避免請求永久掛起
+     */
+    function fetchETFHolding(url) {
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: url,
+                timeout: FETCH_TIMEOUT,
+                onload: (res) => {
+                    try {
+                        const data = JSON.parse(res.responseText);
+                        // findbillion 直接返回陣列
+                        resolve(Array.isArray(data) ? data : []);
                     } catch {
                         resolve([]);
                     }
@@ -657,7 +737,7 @@
 
         // 從父視窗綁定子視窗的點擊事件（繞過 CSP 限制）
         w.document.addEventListener("click", (e) => {
-            const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link");
+            const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link");
             if (link && link.tagName === "A") {
                 e.preventDefault();
                 const href = link.getAttribute("href");
@@ -802,13 +882,14 @@
         const style = document.createElement("style");
         style.id = "chain-link-style";
         style.textContent = `
-            .sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; transition: 0.2s; }
+            .sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; transition: 0.2s; }
             .sup-link { color: #45aaf2; } .sup-link:hover { color: #2d98da; text-decoration-style: solid; }
             .cus-link { color: #a55eea; } .cus-link:hover { color: #8854d0; text-decoration-style: solid; }
             .riv-link { color: #fc5c65; } .riv-link:hover { color: #eb3b5a; text-decoration-style: solid; }
             .all-link { color: #f78fb3; } .all-link:hover { color: #cf6a87; text-decoration-style: solid; }
             .out-link { color: #ff9f43; } .out-link:hover { color: #f7b731; text-decoration-style: solid; }
             .in-link { color: #4ecdc4; } .in-link:hover { color: #26dead; text-decoration-style: solid; }
+            .etf-link { color: #7289da; } .etf-link:hover { color: #5b6eae; text-decoration-style: solid; }
         `;
         document.head.appendChild(style);
     }
@@ -817,7 +898,7 @@
 
     // 監聽點擊事件以實現 SPA 轉跳
     document.addEventListener("click", (e) => {
-        const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link");
+        const link = e.target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link");
         if (link?.tagName === "A") {
             e.preventDefault();
             const href = link.getAttribute("href");
