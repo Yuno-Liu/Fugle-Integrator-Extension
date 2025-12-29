@@ -382,6 +382,15 @@ export function fetchTradingVolume(url: string): Promise<TradingVolumeItem[]> {
             console.log("📡 正在請求成交量 API:", url);
             const token = getVolumeApiToken();
 
+            // 診斷 Token 狀態
+            if (!token) {
+                console.error("🔴 成交量 API Token 未設置！");
+                console.error("   解決方案: 點擊 🔑 Token 按鈕，在彈出窗口中輸入 finmindtrade API Token");
+                console.error("   免費申請: https://finmindtrade.com/");
+            } else {
+                console.log(`✅ 使用成交量 API Token: ${token.substring(0, 10)}...`);
+            }
+
             // 帶有認證標頭的請求
             const message: FetchRequestMessage = {
                 action: "fetch",
@@ -404,12 +413,18 @@ export function fetchTradingVolume(url: string): Promise<TradingVolumeItem[]> {
                         const data = JSON.parse(response.data || "{}") as {
                             data?: TradingVolumeItem[];
                         };
-                        console.log("✅ 成交量 API 回應:", data);
+
                         if (data.data && Array.isArray(data.data)) {
-                            console.log(`✅ 成交量數據: ${data.data.length} 筆記錄`);
+                            console.log(`✅ 成交量 API 回應成功: ${data.data.length} 筆記錄`);
+                            if (data.data.length > 0) {
+                                const firstItem = data.data[0];
+                                console.log(`   📅 最新日期: ${firstItem.date || firstItem.Date || firstItem.TradeDate || firstItem.tradeDate || firstItem.V1}`);
+                                console.log(`   📊 成交量: ${firstItem.Trading_Volume}`);
+                            }
                             resolve(data.data);
                         } else {
-                            console.warn("⚠️ 成交量 API 無有效數據:", data);
+                            console.error("🔴 成交量 API 返回空數據或格式錯誤:", data);
+                            console.error("   可能原因: Token 無效、API 伺服器問題或響應格式改變");
                             resolve([]);
                         }
                     } catch (e) {
@@ -418,6 +433,7 @@ export function fetchTradingVolume(url: string): Promise<TradingVolumeItem[]> {
                     }
                 } else {
                     console.error("🔴 成交量 API 請求失敗:", response?.error || "Unknown error");
+                    console.error("   詳細信息:", response);
                     resolve([]);
                 }
             });
@@ -433,9 +449,14 @@ export function fetchTradingVolume(url: string): Promise<TradingVolumeItem[]> {
  * fetchMajorBuySell - 取得主力買賣超數據
  *
  * 從玉山 API 取得主力買賣超資訊。
+ * 本函式會在 Console 輸出詳細的日期信息，幫助診斷數據可用性。
  *
  * @param url - 主力買賣超 API URL
  * @returns 完整的 ResultSet 結構，或 null
+ *
+ * 📌 診斷信息：
+ * - 如果 API 返回數據，會顯示最新的 10 筆交易日期
+ * - 幫助您判斷當前時間點是否有可用的主力數據
  */
 export function fetchMajorBuySell(url: string): Promise<EsunResultSet<MajorBuySellItem> | null> {
     return new Promise((resolve) => {
@@ -456,7 +477,18 @@ export function fetchMajorBuySell(url: string): Promise<EsunResultSet<MajorBuySe
                 if (response?.success) {
                     try {
                         const data = JSON.parse(response.data || "{}") as EsunResultSet<MajorBuySellItem>;
-                        console.log("✅ 主力買賣超 API 回應:", data);
+
+                        // === 診斷信息：顯示最新的數據日期 ===
+                        if (data?.ResultSet?.Result && data.ResultSet.Result.length > 0) {
+                            const latestResults = data.ResultSet.Result.slice(0, 10);
+                            const dates = latestResults.map((r) => r.V1).join(", ");
+                            console.log(`✅ 主力買賣超 API 回應成功，最新 10 筆日期: ${dates}`);
+                            console.log(`   💾 資料筆數: ${data.ResultSet.Result.length}`);
+                            console.log(`   📅 最新日期: ${data.ResultSet.Result[0]?.V1}`);
+                        } else {
+                            console.warn("⚠️ 主力買賣超 API 返回空結果");
+                        }
+
                         resolve(data);
                     } catch (e) {
                         console.error("🔴 JSON parse error:", e);
@@ -484,6 +516,11 @@ export function fetchMajorBuySell(url: string): Promise<EsunResultSet<MajorBuySe
  *
  * 計算主力買賣超佔總成交量的比率。
  * 正值表示買超，負值表示賣超。
+ *
+ * 📌 智能日期回退機制：
+ * - 首先嘗試使用最新日期的數據
+ * - 如果該日期沒有成交量數據，自動回退到前一筆有數據的日期
+ * - 支援跨多日期計算（例如 5 日買賣占比）
  *
  * @param majorBuySellData - 主力買賣超數據（支援多種格式）
  * @param tradingVolumeData - 成交量數據
@@ -529,57 +566,165 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
         return null;
     }
 
+    // ========================================
+    // 🔍 智能日期檢查與回退機制
+    // ========================================
+    // 📌 如果現在時間點沒有主力數據，自動回退到前一筆有數據的日期
+
+    let validMajorDate: string | null = null;
+    let selectedBuyList: MajorBuySellItem[] = [];
+
+    // 診斷：顯示成交量數據的詳細信息
+    console.log(`📊 成交量數據總筆數: ${tradingVolumeData.length}`);
+    if (tradingVolumeData.length > 0) {
+        const sampleItem = tradingVolumeData[0];
+        console.log(`📊 成交量數據樣本:`, {
+            date: sampleItem.date,
+            Date: sampleItem.Date,
+            TradeDate: sampleItem.TradeDate,
+            tradeDate: sampleItem.tradeDate,
+            V1: sampleItem.V1,
+            Trading_Volume: sampleItem.Trading_Volume,
+        });
+        console.log(`📊 最新的 5 個成交量日期:`, tradingVolumeData.slice(0, 5).map((item) => item.date || item.Date || item.TradeDate || item.tradeDate || item.V1));
+    } else {
+        console.warn("⚠️ 成交量數據為空！可能原因：API Token 無效、API 請求失敗或無可用數據");
+    }
+
+    /**
+     * 在給定的成交量數據中搜尋特定日期的成交量
+     * 支援多種日期格式
+     * @param date - 要搜尋的日期
+     * @returns 該日期的成交量，如果不存在則返回 0
+     */
+    const findVolumeByDate = (date: string): number => {
+        const normalized = normalizeDateFormat(date);
+        console.log(`  🔎 搜尋日期: ${date} (正規化: ${normalized})`);
+
+        // 逐一嘗試多種日期欄位格式
+        for (const item of tradingVolumeData) {
+            const dateFields = [item.date, item.Date, item.TradeDate, item.tradeDate, item.V1];
+            for (const dateField of dateFields) {
+                if (dateField) {
+                    const normalizedField = normalizeDateFormat(dateField);
+                    if (normalizedField === normalized) {
+                        console.log(`    ✅ 找到匹配: ${dateField} → 成交量 ${item.Trading_Volume}`);
+                        return item.Trading_Volume || 0;
+                    }
+                }
+            }
+        }
+        console.log(`    ❌ 未找到匹配的日期`);
+        return 0;
+    };
+
+    /**
+     * 檢查是否為有效交易日（有成交量記錄）
+     * @param date - 要檢查的日期
+     * @returns true 如果該日期有成交量
+     */
+    const isValidTradingDay = (date: string): boolean => {
+        return findVolumeByDate(date) > 0;
+    };
+
+    // 診斷：顯示成交量數據是否為空
+    if (tradingVolumeData.length === 0) {
+        console.error("🔴 致命錯誤: 成交量數據為空，無法進行日期匹配");
+        console.error("   可能原因:");
+        console.error("   1️⃣ Token 未設置或無效 - 點擊 🔑 Token 按鈕設置");
+        console.error("   2️⃣ API 請求失敗 - 檢查網路連接");
+        console.error("   3️⃣ 非交易時段 - 周末或假日無成交量");
+        return null;
+    }
+
+    // 從最新日期開始，逐個回退檢查
+    for (let i = 0; i < Math.min(buyResultList.length, 30); i++) {
+        const date = buyResultList[i]?.V1 ?? null;
+        if (!date) continue;
+
+        console.log(`🔍 檢查主力數據日期: ${date}, 是否為有效交易日:`);
+        const isValid = isValidTradingDay(date);
+        console.log(`   結果: ${isValid ? "✅ 有效" : "❌ 無效"}`);
+
+        // 檢查該日期是否有成交量數據
+        if (isValid) {
+            validMajorDate = date;
+            selectedBuyList = buyResultList.slice(0, Math.min(days, buyResultList.length));
+            console.log(`✅ 找到有效日期: ${validMajorDate}, 對應的買超列表長度: ${selectedBuyList.length}`);
+            break;
+        }
+    }
+
+    if (!validMajorDate) {
+        console.error("🔴 未找到有效的主力交易日期，所有查詢的日期都沒有成交量數據");
+        console.error("   檢查清單:");
+        console.error("   1️⃣ 主力 API 返回的日期:", buyResultList.slice(0, 5).map((r) => r.V1));
+        console.error("   2️⃣ 成交量數據的日期範圍:", {
+            最新: tradingVolumeData[0]?.date || tradingVolumeData[0]?.Date || tradingVolumeData[0]?.TradeDate,
+            最舊: tradingVolumeData[tradingVolumeData.length - 1]?.date || tradingVolumeData[tradingVolumeData.length - 1]?.Date,
+        });
+        console.error("   3️⃣ 日期格式是否匹配？主力: YYYY/MM/DD, 成交量: ?");
+        return null;
+    }
+
+    // ========================================
+    // 計算買賣超總量
+    // ========================================
+
     let totalBuyStocks = 0;
     let totalSellStocks = 0;
 
     // === 計算買超總量 ===
-    buyResultList.forEach((item) => {
+    selectedBuyList.forEach((item) => {
         const buy = parseFloat(item.V4) || 0; // 買進張數
         const sell = parseFloat(item.V5) || 0; // 賣出張數
         totalBuyStocks += buy - sell; // 淨買超
     });
 
     // === 計算賣超總量（若有） ===
-    if (sellResultList) {
-        sellResultList.forEach((item) => {
+    if (sellResultList && sellResultList.length > 0) {
+        const selectedSellList = sellResultList.slice(0, Math.min(days, sellResultList.length));
+        selectedSellList.forEach((item) => {
             const buy = parseFloat(item.V4) || 0;
             const sell = parseFloat(item.V5) || 0;
             totalSellStocks += buy - sell;
         });
     }
 
-    // === 取得主力 API 的最新日期 ===
-    const majorLatestDate = buyResultList[0]?.V1 ?? null;
-
-    // === 計算區間成交量 ===
+    // ========================================
+    // 計算區間成交量
+    // ========================================
     let totalVolume = 0;
     if (tradingVolumeData.length > 0) {
-        let filteredVolumeData = tradingVolumeData;
-
-        // 若有主力日期，則篩選對應日期的成交量
-        if (majorLatestDate) {
-            filteredVolumeData = tradingVolumeData.filter((item) => {
-                // 處理多種日期欄位格式
-                const volumeDate = item.TradeDate || item.Date || item.V1 || item.date || item.tradeDate;
-                return volumeDate ? compareDates(volumeDate, majorLatestDate) : false;
-            });
-        }
-
         // 加總指定天數的成交量
-        const daysToSum = Math.min(days, filteredVolumeData.length);
-        for (let i = 0; i < daysToSum; i++) {
-            const volume = filteredVolumeData[filteredVolumeData.length - 1 - i]?.Trading_Volume || 0;
-            totalVolume += volume;
+        // 從最新的有效日期開始往回計數
+        const maxDays = Math.min(days, tradingVolumeData.length);
+
+        // 先找出最新有效日期在成交量清單中的位置
+        const volumeStartIndex = tradingVolumeData.findIndex((item) => {
+            const volumeDate = item.TradeDate || item.Date || item.V1 || item.date || item.tradeDate;
+            return volumeDate && normalizeDateFormat(volumeDate) === normalizeDateFormat(validMajorDate);
+        });
+
+        if (volumeStartIndex >= 0) {
+            // 從該位置往回計算指定天數的成交量
+            for (let i = 0; i < maxDays && volumeStartIndex - i >= 0; i++) {
+                const volume = tradingVolumeData[volumeStartIndex - i]?.Trading_Volume || 0;
+                totalVolume += volume;
+                console.log(`  📊 第 ${i + 1} 天成交量: ${volume}`);
+            }
         }
     }
 
     if (totalVolume === 0) {
-        console.warn("⚠️ totalVolume is 0, cannot calculate ratio");
+        console.warn("⚠️ totalVolume 為 0，無法計算買賣占比");
         return null;
     }
 
     // === 計算主力買賣占比 ===
     const majorRatio = parseFloat((((totalBuyStocks - Math.abs(totalSellStocks)) / totalVolume) * 100).toFixed(2));
+
+    console.log(`📈 主力買賣占比計算完成: ${majorRatio}% (買超: ${totalBuyStocks}, 賣超: ${totalSellStocks}, 成交量: ${totalVolume})`);
 
     return {
         majorRatio,

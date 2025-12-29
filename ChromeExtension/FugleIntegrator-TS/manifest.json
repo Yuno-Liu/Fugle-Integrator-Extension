@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "透過自動抓取玉山證券 API 的外部金融數據來增強富果股票分析網站",
     "permissions": [],
-    "host_permissions": ["https://sjis.esunsec.com.tw/*", "https://www.fugle.tw/*"],
+    "host_permissions": ["https://sjis.esunsec.com.tw/*", "https://www.fugle.tw/*", "https://api.finmindtrade.com/*"],
     "background": {
         "service_worker": "background.js"
     },
