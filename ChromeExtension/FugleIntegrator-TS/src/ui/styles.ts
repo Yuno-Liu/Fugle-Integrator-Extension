@@ -1,28 +1,76 @@
 /**
+ * ============================================================================
  * 🎨 樣式注入模組 - TypeScript 版本
+ * ============================================================================
+ *
+ * 本模組負責將 CSS 樣式動態注入到頁面中。
+ * 由於 Chrome 擴充功能的內容腳本無法直接引用外部 CSS 檔案，
+ * 因此使用 JavaScript 動態創建 <style> 標籤。
+ *
+ * 📌 設計原則：
+ * - 樣式定義集中管理，方便維護
+ * - 使用 CSS 變數實現主題化
+ * - 避免與富果原生樣式衝突
+ * - 支援深色主題
+ *
+ * 📌 模組功能：
+ * 1. injectStyles() - 注入主要的全域樣式
+ * 2. injectChainStyles() - 注入關係鏈連結樣式
+ *
+ * 📌 CSS 變數定義：
+ * - --fugle-bg: 背景色
+ * - --fugle-card-bg: 卡片背景色
+ * - --fugle-border: 邊框色
+ * - --fugle-primary: 主題色（紫色）
+ * - --fugle-text: 主要文字色
+ * - --fugle-text-muted: 次要文字色
+ * - --fugle-accent: 強調色（橙色）
  */
 
 /**
- * 注入全域樣式
+ * injectStyles - 注入全域樣式
+ *
+ * 創建包含所有主要樣式的 <style> 標籤並插入到 <head>。
+ * 使用唯一 ID 防止重複注入。
+ *
+ * 📌 樣式區塊：
+ * 1. CSS 變數定義
+ * 2. 資訊卡容器樣式 (#stock-info-card)
+ * 3. 固定模式樣式 (.fixed-mode)
+ * 4. 資訊區塊樣式 (.info-section, .info-row)
+ * 5. 評等標籤樣式 (.rating-tag)
+ * 6. 按鈕樣式 (.custom-analysis-btn)
+ * 7. 開關樣式 (.switch, .slider)
+ * 8. 搜尋 Modal 樣式 (#fugle-search-modal)
+ * 9. Token Modal 樣式 (#fugle-token-modal)
  */
 export function injectStyles(): void {
+    // 檢查是否已注入，避免重複
     if (document.querySelector("#custom-analysis-style")) return;
+
     const style = document.createElement("style");
     style.id = "custom-analysis-style";
     style.textContent = `
+        /* ========================================
+         * 🎨 CSS 變數定義 - 深色主題
+         * ======================================== */
         :root {
-            --fugle-bg: #1e1e1e;
-            --fugle-card-bg: #252526;
-            --fugle-border: #333333;
-            --fugle-primary: #6366f1;
-            --fugle-text: #d4d4d4;
-            --fugle-text-muted: #808080;
-            --fugle-accent: #ff9f43;
+            --fugle-bg: #1e1e1e;           /* 頁面背景 */
+            --fugle-card-bg: #252526;       /* 卡片背景 */
+            --fugle-border: #333333;        /* 邊框顏色 */
+            --fugle-primary: #6366f1;       /* 主題色（紫） */
+            --fugle-text: #d4d4d4;          /* 主要文字 */
+            --fugle-text-muted: #808080;    /* 次要文字 */
+            --fugle-accent: #ff9f43;        /* 強調色（橙） */
         }
+
+        /* ========================================
+         * 📋 資訊卡容器 - 主要容器樣式
+         * ======================================== */
         #stock-info-card {
             background: var(--fugle-card-bg);
             border: 1px solid var(--fugle-border);
-            border-left: 4px solid var(--fugle-primary);
+            border-left: 4px solid var(--fugle-primary);  /* 左側強調邊框 */
             padding: 16px;
             margin: 12px 0;
             font-family: "Inter", "Segoe UI", "Microsoft JhengHei", sans-serif;
@@ -32,6 +80,10 @@ export function injectStyles(): void {
             box-shadow: 0 8px 24px rgba(0,0,0,0.2);
             line-height: 1.6;
         }
+
+        /* ========================================
+         * 📌 固定模式 - 左/右側固定定位
+         * ======================================== */
         #stock-info-card.fixed-mode {
             position: fixed;
             top: 100px;
@@ -42,10 +94,16 @@ export function injectStyles(): void {
             margin: 0;
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
+
+        /* 固定模式的自定義捲軸 */
         #stock-info-card.fixed-mode::-webkit-scrollbar { width: 6px; }
         #stock-info-card.fixed-mode::-webkit-scrollbar-track { background: #1e1e1e; }
         #stock-info-card.fixed-mode::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
         #stock-info-card.fixed-mode::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* ========================================
+         * 📊 資訊區塊 - 分組容器
+         * ======================================== */
         .info-section {
             margin-bottom: 12px;
             padding-bottom: 8px;
@@ -56,6 +114,10 @@ export function injectStyles(): void {
             padding-bottom: 0;
             border-bottom: none;
         }
+
+        /* ========================================
+         * 📏 資訊列 - 標籤:數值 格式
+         * ======================================== */
         .info-row {
             display: flex;
             align-items: flex-start;
@@ -74,6 +136,10 @@ export function injectStyles(): void {
             flex: 1;
             word-break: break-all;
         }
+
+        /* ========================================
+         * 🏷️ 評等標籤 - 機構評等顯示
+         * ======================================== */
         .rating-tag {
             display: inline-block;
             background: #2d2d2d;
@@ -89,6 +155,10 @@ export function injectStyles(): void {
             border-color: var(--fugle-primary);
             background: #333;
         }
+
+        /* ========================================
+         * 🔘 分析按鈕 - 工具列按鈕
+         * ======================================== */
         .custom-analysis-btn {
             background: #2d2d2d;
             color: #ccc;
@@ -109,7 +179,9 @@ export function injectStyles(): void {
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
 
-        /* Toggle Switch Styles */
+        /* ========================================
+         * 🔄 開關元件 - 顯示/隱藏切換
+         * ======================================== */
         .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
@@ -117,7 +189,9 @@ export function injectStyles(): void {
         input:checked + .slider { background-color: var(--fugle-primary); }
         input:checked + .slider:before { transform: translateX(16px); }
 
-        /* Search Modal Styles */
+        /* ========================================
+         * 🔍 搜尋 Modal - 覆蓋層和內容
+         * ======================================== */
         #fugle-search-modal {
             position: fixed;
             top: 0;
@@ -130,7 +204,7 @@ export function injectStyles(): void {
             justify-content: center;
             align-items: flex-start;
             padding-top: 100px;
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);  /* 背景模糊效果 */
         }
         .search-modal-content {
             background: #252526;
@@ -162,6 +236,8 @@ export function injectStyles(): void {
             padding: 16px;
             overflow-y: auto;
         }
+
+        /* 搜尋輸入框 */
         #category-search-input {
             width: 100%;
             padding: 10px;
@@ -177,6 +253,8 @@ export function injectStyles(): void {
             outline: none;
             border-color: var(--fugle-primary);
         }
+
+        /* 搜尋結果項目 */
         .search-result-item {
             padding: 10px;
             border-bottom: 1px solid #333;
@@ -188,6 +266,8 @@ export function injectStyles(): void {
         .search-result-item:hover {
             background: #333;
         }
+
+        /* 結果類型標籤 */
         .result-tag {
             font-size: 12px;
             padding: 2px 6px;
@@ -196,14 +276,16 @@ export function injectStyles(): void {
             font-weight: bold;
             white-space: nowrap;
         }
-        .tag-concept { background: rgba(82, 196, 26, 0.2); color: #52c41a; }
-        .tag-industry { background: rgba(69, 170, 242, 0.2); color: #45aaf2; }
-        .tag-group { background: rgba(236, 59, 97, 0.2); color: #ec3b61; }
-        .tag-stock { background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555; }
+        .tag-concept { background: rgba(82, 196, 26, 0.2); color: #52c41a; }   /* 概念-綠 */
+        .tag-industry { background: rgba(69, 170, 242, 0.2); color: #45aaf2; } /* 產業-藍 */
+        .tag-group { background: rgba(236, 59, 97, 0.2); color: #ec3b61; }     /* 集團-紅 */
+        .tag-stock { background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555; }  /* 個股 */
         .result-name {
             color: #d4d4d4;
             font-size: 14px;
         }
+
+        /* 股票標籤（膠囊形狀） */
         .stock-chip {
             display: inline-block;
             background: #333;
@@ -222,7 +304,9 @@ export function injectStyles(): void {
             transform: translateY(-1px);
         }
 
-        /* Sticky Headers for Fixed Mode */
+        /* ========================================
+         * 📌 固定模式的黏性標題
+         * ======================================== */
         #stock-info-card.fixed-mode #info-header {
             position: sticky;
             top: 0;
@@ -239,7 +323,9 @@ export function injectStyles(): void {
             z-index: 15;
         }
 
-        /* Token Modal Styles */
+        /* ========================================
+         * 🔑 Token Modal - Token 設置視窗
+         * ======================================== */
         #fugle-token-modal {
             position: fixed;
             top: 0;
@@ -280,25 +366,46 @@ export function injectStyles(): void {
 }
 
 /**
- * 🔗 注入關係鏈連結樣式
+ * injectChainStyles - 注入關係鏈連結樣式
+ *
+ * 為各類關係連結定義不同的顏色，方便用戶快速識別。
+ * 使用虛線底線作為連結標記，滑鼠懸停時變為實線。
+ *
+ * 📌 連結類型與顏色：
+ * - .sup-link (供應商): 藍色 #45aaf2
+ * - .cus-link (客戶): 紫色 #a55eea
+ * - .riv-link (對手): 紅色 #fc5c65
+ * - .all-link (策略聯盟): 粉色 #f78fb3
+ * - .out-link (轉投資): 橙色 #ff9f43
+ * - .in-link (被投資): 青色 #4ecdc4
+ * - .etf-link (ETF): 藍紫色 #7289da
+ * - .relation-link (相關): 綠色 #52c41a
+ * - .concept-link (概念): 綠色 #52c41a
+ * - .industry-link (產業): 藍色 #45aaf2
+ * - .group-link (集團): 粉色 #f78fb3
  */
 export function injectChainStyles(): void {
+    // 檢查是否已注入，避免重複
     if (document.querySelector("#chain-link-style")) return;
+
     const style = document.createElement("style");
     style.id = "chain-link-style";
     style.textContent = `
+        /* 通用連結樣式 */
         .sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link, .relation-link, .concept-link, .industry-link, .group-link { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; transition: 0.2s; }
-        .sup-link { color: #45aaf2; } .sup-link:hover { color: #2d98da; text-decoration-style: solid; }
-        .cus-link { color: #a55eea; } .cus-link:hover { color: #8854d0; text-decoration-style: solid; }
-        .riv-link { color: #fc5c65; } .riv-link:hover { color: #eb3b5a; text-decoration-style: solid; }
-        .all-link { color: #f78fb3; } .all-link:hover { color: #cf6a87; text-decoration-style: solid; }
-        .out-link { color: #ff9f43; } .out-link:hover { color: #f7b731; text-decoration-style: solid; }
-        .in-link { color: #4ecdc4; } .in-link:hover { color: #26dead; text-decoration-style: solid; }
-        .etf-link { color: #7289da; } .etf-link:hover { color: #5b6eae; text-decoration-style: solid; }
-        .relation-link { color: #52c41a; } .relation-link:hover { color: #389e0d; text-decoration-style: solid; }
-        .concept-link { color: #52c41a; } .concept-link:hover { color: #389e0d; text-decoration-style: solid; }
-        .industry-link { color: #45aaf2; } .industry-link:hover { color: #2d98da; text-decoration-style: solid; }
-        .group-link { color: #f78fb3; } .group-link:hover { color: #cf6a87; text-decoration-style: solid; }
+
+        /* 各類型連結顏色定義 */
+        .sup-link { color: #45aaf2; } .sup-link:hover { color: #2d98da; text-decoration-style: solid; }  /* 供應商-藍 */
+        .cus-link { color: #a55eea; } .cus-link:hover { color: #8854d0; text-decoration-style: solid; }  /* 客戶-紫 */
+        .riv-link { color: #fc5c65; } .riv-link:hover { color: #eb3b5a; text-decoration-style: solid; }  /* 對手-紅 */
+        .all-link { color: #f78fb3; } .all-link:hover { color: #cf6a87; text-decoration-style: solid; }  /* 聯盟-粉 */
+        .out-link { color: #ff9f43; } .out-link:hover { color: #f7b731; text-decoration-style: solid; }  /* 轉投資-橙 */
+        .in-link { color: #4ecdc4; } .in-link:hover { color: #26dead; text-decoration-style: solid; }    /* 被投資-青 */
+        .etf-link { color: #7289da; } .etf-link:hover { color: #5b6eae; text-decoration-style: solid; }  /* ETF-藍紫 */
+        .relation-link { color: #52c41a; } .relation-link:hover { color: #389e0d; text-decoration-style: solid; }  /* 相關-綠 */
+        .concept-link { color: #52c41a; } .concept-link:hover { color: #389e0d; text-decoration-style: solid; }    /* 概念-綠 */
+        .industry-link { color: #45aaf2; } .industry-link:hover { color: #2d98da; text-decoration-style: solid; }  /* 產業-藍 */
+        .group-link { color: #f78fb3; } .group-link:hover { color: #cf6a87; text-decoration-style: solid; }        /* 集團-粉 */
     `;
     document.head.appendChild(style);
 }
