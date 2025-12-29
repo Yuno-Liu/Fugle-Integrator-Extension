@@ -694,10 +694,12 @@
                     </div>
                     <span id="toggle-icon" style="margin-left: auto; font-size: 12px; color: var(--fugle-primary); background: #2d2d2d; padding: 4px 10px; border-radius: 20px; border: 1px solid #444; transition: 0.2s;">${isCollapsed ? "展開詳情 ▽" : "收起詳情 △"}</span>
                 </div>
+                <!-- 註解：暫時移除摘要區塊
                 <div id="info-summary" style="display: ${isCollapsed ? "block" : "none"};">
                     ${ratingSummary || ""}
                     ${financeContent || ""}
                 </div>
+                -->
                 <div id="info-body" style="display: ${isCollapsed ? "none" : "block"};">
                     ${createSection("basic", "基本資料", "📝", basicContent, true)}
                     ${createSection("relation", "關係企業", "🔗", relationContent, true)}
