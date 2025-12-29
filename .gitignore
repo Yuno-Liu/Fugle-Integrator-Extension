@@ -1,0 +1,101 @@
+# 🔐 Node.js / npm
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npm
+dist/
+build/
+
+# 🐍 Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# 📝 環境變數
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 🛠️ 開發工具
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 📊 構建輸出與暫存
+dist/
+build/
+*.tsbuildinfo
+out/
+.cache/
+.temp/
+
+# 📋 日誌檔案
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# 🔍 IDE 生成檔案
+.classpath
+.project
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# 💾 本地檔案
+local/
+temp/
+*.bak
+*.tmp
+
+# 🔑 機密檔案 (Chrome Extension Token/Keys)
+*.key
+*.pem
+config/keys/
+
+# 📦 Chrome 擴充功能特定
+crx
+crx.zip
+*.crx
+
+# 🎯 TypeScript 編譯檔案
+*.js.map
+*.d.ts.map
+
+# 🧪 測試覆蓋率
+coverage/
+.nyc_output/
+
+# 📱 OS 特定檔案
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+.TemporaryItems
+
+# 🔌 IDE 外掛程式快取
+.vscode-test
+.vscode/extensions/
+
+# 🌐 瀏覽器擴充功能簽名
+*.pem
+extension_key.txt

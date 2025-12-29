@@ -1,0 +1,31 @@
+{
+    "name": "fugle-integrator-ts",
+    "version": "1.0.0",
+    "description": "富果整合器 - TypeScript 版本",
+    "scripts": {
+        "build": "npm run build:background && npm run build:content && npm run copy:assets",
+        "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020",
+        "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020",
+        "copy:assets": "node -e \"require('fs').copyFileSync('../FugleIntegrator-TS/stock-data.json', 'dist/stock-data.json')\"",
+        "watch": "npm run build && concurrently \"npm run watch:background\" \"npm run watch:content\"",
+        "watch:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020 --watch",
+        "watch:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 --watch",
+        "clean": "rimraf dist/*.js dist/*.js.map",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/chrome": "^0.0.287",
+        "concurrently": "^9.1.2",
+        "esbuild": "^0.24.2",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.7.2"
+    },
+    "keywords": [
+        "chrome-extension",
+        "fugle",
+        "stock",
+        "typescript"
+    ],
+    "author": "",
+    "license": "MIT"
+}
