@@ -1,0 +1,25 @@
+{
+    "name": "gemini-url-prompt-ts",
+    "version": "1.0.0",
+    "description": "Gemini URL Prompt - TypeScript 版本",
+    "scripts": {
+        "build": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 && npm run copy:manifest",
+        "copy:manifest": "node -e \"require('fs').copyFileSync('manifest.dist.json', 'dist/manifest.json')\"",
+        "watch": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 --watch",
+        "clean": "rimraf dist/*.js dist/*.js.map",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/chrome": "^0.0.287",
+        "esbuild": "^0.24.2",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.7.2"
+    },
+    "keywords": [
+        "chrome-extension",
+        "gemini",
+        "typescript"
+    ],
+    "author": "",
+    "license": "MIT"
+}

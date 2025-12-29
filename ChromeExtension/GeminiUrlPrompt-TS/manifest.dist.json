@@ -1,8 +1,10 @@
 {
     "manifest_version": 3,
     "name": "Gemini URL Prompt - 自動填入提示詞",
-    "version": "1.0",
+    "version": "1.0.0",
     "description": "自動讀取網址參數 p 並填入 Gemini 對話框",
+    "permissions": [],
+    "host_permissions": ["https://gemini.google.com/*"],
     "content_scripts": [
         {
             "matches": ["https://gemini.google.com/*"],
