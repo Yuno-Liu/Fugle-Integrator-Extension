@@ -4,7 +4,7 @@
     "version": "1.0",
     "description": "整合富果頁面，自動抓取產業鏈、機構評等、財務指標等外部數據並優化 UI 顯示",
     "permissions": [],
-    "host_permissions": ["https://sjis.esunsec.com.tw/*", "https://www.fugle.tw/*", "https://www.findbillion.com/*"],
+    "host_permissions": ["https://sjis.esunsec.com.tw/*", "https://www.fugle.tw/*", "https://www.findbillion.com/*", "https://api.finmindtrade.com/*"],
     "web_accessible_resources": [
         {
             "resources": ["stock-data.json"],

@@ -25,9 +25,118 @@
     let dbLoadPromise = null;
     // 日期時間顯示已初始化標誌
     let isDateTimeInitialized = false;
+    // 成交量 API Token（存儲在 localStorage）
+    const VOLUME_API_TOKEN_KEY = "fugle-volume-api-token";
+    /**
+     * 🔑 DEFAULT_VOLUME_TOKEN 配置說明
+     *
+     * 設定為空字符串 "" 的原因：
+     * 1. **數據隱私與安全**：避免將真實 Token 硬編碼在開源代碼中，防止濫用
+     * 2. **用戶自主性**：允許每位使用者使用自己的 finmindtrade 帳戶與 Token
+     * 3. **API 限額管理**：不同的 Token 有各自的 API 請求額度，共享 Token 會導致額度迅速耗盡
+     *
+     * 工作流程：
+     * - 首次使用時，成交量數據會因 Token 為空而無法加載（此為正常現象）
+     * - 使用者點擊「⚙️ 設定 Token」按鈕開啟 Token 設置彈窗
+     * - 使用者在 https://finmindtrade.com 申請免費帳戶並取得 API Token
+     * - 將 Token 貼入設置彈窗並保存，會持久化至 localStorage
+     * - 後續訪問會使用已保存的 Token 自動抓取成交量數據
+     *
+     * 有效 Token 的格式範例：
+     * - 長度通常為 32-64 個字符（由英數字組成）
+     * - 例如：0e4bf67f6e6e4d6f6f6f6f6f6f6f6f6f
+     */
+    const DEFAULT_VOLUME_TOKEN = "";
 
     /**
-     * 🔧 防抖動函式：避免短時間內重複觸發
+     * � 獲取成交量 API Token（如果不存在則返回默認值）
+     */
+    function getVolumeApiToken() {
+        return localStorage.getItem(VOLUME_API_TOKEN_KEY) || DEFAULT_VOLUME_TOKEN;
+    }
+
+    /**
+     * 🔐 設置成交量 API Token
+     */
+    function setVolumeApiToken(token) {
+        localStorage.setItem(VOLUME_API_TOKEN_KEY, token);
+    }
+
+    /**
+     * 🔐 創建 Token 設置彈出窗口
+     */
+    function createTokenSettingModal() {
+        const existing = document.getElementById("fugle-token-modal");
+        if (existing) existing.remove();
+
+        const modal = document.createElement("div");
+        modal.id = "fugle-token-modal";
+        modal.innerHTML = `
+            <div class="token-modal-content">
+                <div class="token-modal-header">
+                    <span style="font-size: 18px; font-weight: bold;">🔑 設定成交量 API Token</span>
+                    <span class="close-btn" style="cursor: pointer; font-size: 24px;">×</span>
+                </div>
+                <div class="token-modal-body">
+                    <div style="margin-bottom: 12px; font-size: 12px; color: #aaa;">
+                        <p>成交量數據需要使用 finmindtrade API Token。你可以在 <a href="https://finmindtrade.com/" target="_blank" style="color: #6366f1; text-decoration: underline;">finmindtrade.com</a> 申請免費帳戶並獲取 Token。</p>
+                    </div>
+                    <input type="password" id="token-input" placeholder="輸入你的 finmindtrade API Token..." style="width: 100%; padding: 10px; margin-bottom: 12px; background: #1e1e1e; border: 1px solid #444; border-radius: 4px; color: #fff; box-sizing: border-box;">
+                    <div style="display: flex; gap: 8px;">
+                        <button id="save-token-btn" style="flex: 1; padding: 8px; background: #6366f1; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">保存 Token</button>
+                        <button id="reset-token-btn" style="flex: 1; padding: 8px; background: #444; color: #aaa; border: none; border-radius: 4px; cursor: pointer;">使用默認</button>
+                        <button id="cancel-token-btn" style="flex: 1; padding: 8px; background: #333; color: #aaa; border: 1px solid #444; border-radius: 4px; cursor: pointer;">取消</button>
+                    </div>
+                    <div id="token-status" style="margin-top: 12px; padding: 8px; border-radius: 4px; background: rgba(99, 102, 241, 0.1); color: #6366f1; font-size: 12px; display: none;"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // 綁定事件
+        const closeBtn = modal.querySelector(".close-btn");
+        const saveBtn = modal.querySelector("#save-token-btn");
+        const resetBtn = modal.querySelector("#reset-token-btn");
+        const cancelBtn = modal.querySelector("#cancel-token-btn");
+        const tokenInput = modal.querySelector("#token-input");
+        const tokenStatus = modal.querySelector("#token-status");
+
+        // 加載已存儲的 Token
+        const currentToken = localStorage.getItem(VOLUME_API_TOKEN_KEY);
+        if (currentToken) {
+            tokenInput.value = currentToken;
+        }
+
+        closeBtn.addEventListener("click", () => modal.remove());
+        cancelBtn.addEventListener("click", () => modal.remove());
+        modal.addEventListener("click", (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        saveBtn.addEventListener("click", () => {
+            const token = tokenInput.value.trim();
+            if (!token) {
+                tokenStatus.textContent = "❌ Token 不能為空";
+                tokenStatus.style.display = "block";
+                return;
+            }
+            setVolumeApiToken(token);
+            tokenStatus.textContent = "✅ Token 已保存成功";
+            tokenStatus.style.display = "block";
+            setTimeout(() => modal.remove(), 1500);
+        });
+
+        resetBtn.addEventListener("click", () => {
+            localStorage.removeItem(VOLUME_API_TOKEN_KEY);
+            tokenInput.value = DEFAULT_VOLUME_TOKEN;
+            tokenStatus.textContent = "✅ 已重置為默認 Token";
+            tokenStatus.style.display = "block";
+            setTimeout(() => modal.remove(), 1500);
+        });
+    }
+
+    /**
+     * �🔧 防抖動函式：避免短時間內重複觸發
      */
     const debounce = (fn, delay) => {
         return (...args) => {
@@ -170,6 +279,21 @@
 
         // 🏭 產能分析數據 (工廠位置、規格、數量、單位)
         capacity: (id) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/28/97/4b/twstockdata.xdjjson?x=Stock-Basic0008-1&a=${id}.TW`,
+
+        // 💼 主力買賣超數據 (買超、賣超 - 分別是第一組和第二組)
+        // f 參數表示天數 (1=1天, 5=5天, 10=10天, 20=20天)
+        majorBuySell1: (id) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/b5/2d/d5/twstockdata.xdjjson?a=${id}&x=stock-chip0002-4&f=1`,
+        majorBuySell5: (id) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/b5/2d/d5/twstockdata.xdjjson?a=${id}&x=stock-chip0002-4&f=5`,
+        majorBuySell10: (id) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/b5/2d/d5/twstockdata.xdjjson?a=${id}&x=stock-chip0002-4&f=10`,
+        majorBuySell20: (id) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/b5/2d/d5/twstockdata.xdjjson?a=${id}&x=stock-chip0002-4&f=20`,
+
+        // 📊 成交量數據 (finmindtrade API - 需要 Token in Authorization Header)
+        // 起始日期為當天減去 20 天，以確保能取到足夠的數據
+        tradingVolume: (id) => {
+            const endDate = new Date().toISOString().split("T")[0];
+            const startDate = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+            return `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${id}&start_date=${startDate}&end_date=${endDate}`;
+        },
     };
 
     /**
@@ -329,7 +453,22 @@
             await loadStockDatabase();
 
             // 第一批：個股相關數據（較小、較快）
-            const [industries, concepts, groups, basicData, ratingData, etfHoldingData, capacityData] = await Promise.all([fetchV2(API_URLS.industry(stockId)), fetchV2(API_URLS.concept(stockId)), fetchV2(API_URLS.group(stockId)), fetchResult(API_URLS.basic(stockId)), fetchResult(API_URLS.ratings(stockId)), fetchETFHolding(API_URLS.etfHolding(stockId)), fetchResult(API_URLS.capacity(stockId))]);
+            console.log("🔵 開始請求 API 數據，股票代碼:", stockId);
+            const [industries, concepts, groups, basicData, ratingData, etfHoldingData, capacityData, majorBuySell1Data, majorBuySell5Data, majorBuySell10Data, majorBuySell20Data, tradingVolumeData] = await Promise.all([
+                fetchV2(API_URLS.industry(stockId)),
+                fetchV2(API_URLS.concept(stockId)),
+                fetchV2(API_URLS.group(stockId)),
+                fetchResult(API_URLS.basic(stockId)),
+                fetchResult(API_URLS.ratings(stockId)),
+                fetchETFHolding(API_URLS.etfHolding(stockId)),
+                fetchResult(API_URLS.capacity(stockId)),
+                fetchMajorBuySell(API_URLS.majorBuySell1(stockId)),
+                fetchMajorBuySell(API_URLS.majorBuySell5(stockId)),
+                fetchMajorBuySell(API_URLS.majorBuySell10(stockId)),
+                fetchMajorBuySell(API_URLS.majorBuySell20(stockId)),
+                fetchTradingVolume(API_URLS.tradingVolume(stockId)),
+            ]);
+            console.log("✅ 所有 API 請求完成");
 
             // 檢查頁面是否已切換（避免渲染過時數據）
             const currentStockId = document.querySelector(".card-group-header__info__symbol")?.textContent?.trim();
@@ -631,6 +770,60 @@
             // 組合各區塊內容
             const ratingContent = ratingHtml ? `<div class="info-row"><div class="info-content">${ratingHtml}</div></div>` : null;
 
+            // 🎯 計算主力買賣占比
+            console.log("🔍 majorBuySell1Data 詳細:", majorBuySell1Data);
+            console.log("🔍 majorBuySell5Data 詳細:", majorBuySell5Data);
+            console.log("🔍 majorBuySell10Data 詳細:", majorBuySell10Data);
+            console.log("🔍 majorBuySell20Data 詳細:", majorBuySell20Data);
+            console.log("🔍 tradingVolumeData 詳細:", tradingVolumeData);
+
+            const major1Ratio = calculateMajorRatio(majorBuySell1Data, tradingVolumeData, 1);
+            const major5Ratio = calculateMajorRatio(majorBuySell5Data, tradingVolumeData, 5);
+            const major10Ratio = calculateMajorRatio(majorBuySell10Data, tradingVolumeData, 10);
+            const major20Ratio = calculateMajorRatio(majorBuySell20Data, tradingVolumeData, 20);
+
+            console.log("✅ major1Ratio:", major1Ratio);
+            console.log("✅ major5Ratio:", major5Ratio);
+            console.log("✅ major10Ratio:", major10Ratio);
+            console.log("✅ major20Ratio:", major20Ratio);
+
+            // 格式化占比顯示 (使用顏色表示正負)
+            const formatMajorRatio = (ratio) => {
+                if (!ratio) return "-";
+                const color = ratio.majorRatio >= 0 ? "#ff4d4f" : "#52c41a"; // 正值紅色(買超)，負值綠色(賣超)
+                const sign = ratio.majorRatio >= 0 ? "+" : "";
+                return `<span style="color: ${color}; font-weight: bold;">${sign}${ratio.majorRatio}%</span>`;
+            };
+
+            const majorContent =
+                major1Ratio || major5Ratio || major10Ratio || major20Ratio
+                    ? `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
+                        <div style="background: rgba(255, 77, 79, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #ff4d4f;">
+                            <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主1買賣占比</div>
+                            <div style="font-size: 16px; font-weight: bold; color: #fff;">${major1Ratio ? formatMajorRatio(major1Ratio) : "-"}</div>
+                            ${major1Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major1Ratio.totalBuyStocks / 10000).toFixed(2)} 張｜賣${(major1Ratio.totalSellStocks / 10000).toFixed(2)} 張</div>` : ""}
+                        </div>
+                        <div style="background: rgba(255, 159, 67, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #ff9f43;">
+                            <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主5買賣占比</div>
+                            <div style="font-size: 16px; font-weight: bold; color: #fff;">${major5Ratio ? formatMajorRatio(major5Ratio) : "-"}</div>
+                            ${major5Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major5Ratio.totalBuyStocks / 10000).toFixed(2)} 張｜賣${(major5Ratio.totalSellStocks / 10000).toFixed(2)} 張</div>` : ""}
+                        </div>
+                        <div style="background: rgba(52, 152, 219, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #3498db;">
+                            <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主10買賣占比</div>
+                            <div style="font-size: 16px; font-weight: bold; color: #fff;">${major10Ratio ? formatMajorRatio(major10Ratio) : "-"}</div>
+                            ${major10Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major10Ratio.totalBuyStocks / 10000).toFixed(2)} 張｜賣${(major10Ratio.totalSellStocks / 10000).toFixed(2)} 張</div>` : ""}
+                        </div>
+                        <div style="background: rgba(155, 89, 182, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #9b59b6;">
+                            <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主20買賣占比</div>
+                            <div style="font-size: 16px; font-weight: bold; color: #fff;">${major20Ratio ? formatMajorRatio(major20Ratio) : "-"}</div>
+                            ${major20Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major20Ratio.totalBuyStocks / 10000).toFixed(2)} 張｜賣${(major20Ratio.totalSellStocks / 10000).toFixed(2)} 張</div>` : ""}
+                        </div>
+                    </div>`
+                    : null;
+
+            console.log("📋 majorContent 最終結果:", majorContent);
+
             const financeContent = `
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     <div>
@@ -702,6 +895,7 @@
                 -->
                 <div id="info-body" style="display: ${isCollapsed ? "none" : "block"};">
                     ${createSection("basic", "基本資料", "📝", basicContent, true)}
+                    ${createSection("major", "主力買賣", "💼", majorContent, true)}
                     ${createSection("relation", "關係企業", "🔗", relationContent, true)}
                     ${createSection("invest", "投資佈局", "💼", investContent, false)}
                     ${createSection("rating", "機構評等", "🎯", ratingContent, true)}
@@ -769,6 +963,7 @@
                 renderPopupContent(popupWindow, infoDiv, stockName, stockId);
             }
         } catch (e) {
+            alert("Fugle Integrator Error: " + e.message);
             console.error("Fugle Integrator Error:", e);
         } finally {
             isFetching = false; // 釋放請求鎖定
@@ -825,6 +1020,23 @@
     }
 
     /**
+     * 📊 網路請求封裝 (返回完整結果集)：返回 ResultSet.Result 陣列
+     */
+    function fetchResult(url) {
+        return new Promise(async (resolve) => {
+            const text = await fetchViaBackground(url);
+            if (!text) return resolve([]);
+            try {
+                const data = JSON.parse(text);
+                resolve(data.ResultSet?.Result || []);
+            } catch (e) {
+                console.error("🔴 fetchResult parse error:", e, "URL:", url);
+                resolve([]);
+            }
+        });
+    }
+
+    /**
      * 🤝 網路請求封裝 (關係企業)：處理特定的關係鏈數據，返回去重後的 {id, name} 物件
      */
     function fetchStockRelation(url) {
@@ -849,16 +1061,251 @@
     }
 
     /**
-     * 📄 網路請求封裝 (原始結果)：直接返回 API 的 Result 陣列
+     * � 計算主力買賣占比
+     * @param {Array} majorBuySellData - API 返回的原始數據 (結果集數組)
+     * @param {Array} tradingVolumeData - 成交量數據
+     * @returns {Object} { majorRatio, totalBuy, totalSell, totalVolume }
      */
-    function fetchResult(url) {
-        return new Promise(async (resolve) => {
-            const text = await fetchViaBackground(url);
-            if (!text) return resolve([]);
-            try {
-                resolve(JSON.parse(text).ResultSet.Result);
-            } catch {
+    /**
+     * 📊 計算主力買賣占比
+     * @param {Object|Array} majorBuySellData - API 返回的原始數據 (ResultSet 結構或包含兩個 ResultSet 的陣列)
+     * @param {Array} tradingVolumeData - 成交量數據陣列
+     * @param {Number} days - 統計天數 (1, 5, 10)
+     * @returns {Object|null} { majorRatio, totalBuyStocks, totalSellStocks, totalVolume }
+     */
+    function calculateMajorRatio(majorBuySellData, tradingVolumeData, days = 1) {
+        if (!majorBuySellData) {
+            console.warn("⚠️ majorBuySellData is null or undefined");
+            return null;
+        }
+
+        console.log("🔍 majorBuySellData 完整結構:", JSON.stringify(majorBuySellData, null, 2).substring(0, 500));
+
+        // 嘗試多種結構解析
+        let buyResultList = null;
+        let sellResultList = null;
+
+        // 結構1: 陣列形式 [{ResultSet: {Result: [...]}}, {ResultSet: {Result: [...]}}]
+        if (Array.isArray(majorBuySellData) && majorBuySellData.length >= 2) {
+            buyResultList = majorBuySellData[0]?.ResultSet?.Result;
+            sellResultList = majorBuySellData[1]?.ResultSet?.Result;
+            console.log("✅ 使用結構1: 包含買賣的陣列格式");
+        }
+        // 結構2: 單個 ResultSet 物件 {ResultSet: {Result: [...]}}
+        else if (majorBuySellData?.ResultSet?.Result) {
+            buyResultList = majorBuySellData.ResultSet.Result;
+            console.log("✅ 使用結構2: 單個 ResultSet 物件");
+        }
+        // 結構3: 直接是陣列
+        else if (Array.isArray(majorBuySellData) && majorBuySellData.length > 0) {
+            buyResultList = majorBuySellData;
+            console.log("✅ 使用結構3: 直接是陣列");
+        }
+
+        if (!buyResultList || !Array.isArray(buyResultList) || buyResultList.length === 0) {
+            console.warn("⚠️ buyResultList is empty or invalid");
+            return null;
+        }
+
+        console.log("📊 buyResultList:", buyResultList);
+        console.log("📊 sellResultList:", sellResultList);
+        console.log("📊 tradingVolumeData:", tradingVolumeData);
+
+        // 計算買超和賣超總額
+        let totalBuyStocks = 0;
+        let totalSellStocks = 0;
+
+        // 計算買超
+        buyResultList.forEach((item) => {
+            const buy = Number.parseFloat(item.V4) || 0;
+            const sell = Number.parseFloat(item.V5) || 0;
+            const countNumber = buy - sell;
+            totalBuyStocks += countNumber;
+        });
+
+        // 計算賣超（如果有賣超資料）
+        if (sellResultList && Array.isArray(sellResultList)) {
+            sellResultList.forEach((item) => {
+                const buy = Number.parseFloat(item.V4) || 0;
+                const sell = Number.parseFloat(item.V5) || 0;
+                const countNumber = buy - sell;
+                totalSellStocks += countNumber;
+            });
+        }
+
+        // 日期格式轉換輔助函式 (yyyy-MM-dd 或 yyyy/MM/dd => yyyy-MM-dd)
+        const normalizeDateFormat = (dateStr) => {
+            if (!dateStr) return null;
+            // 將 yyyy/MM/dd 格式轉換為 yyyy-MM-dd
+            return String(dateStr).replace(/\//g, "-");
+        };
+
+        // 日期比較輔助函式 (統一格式後比較)
+        const compareDates = (date1, date2) => {
+            const normalized1 = normalizeDateFormat(date1);
+            const normalized2 = normalizeDateFormat(date2);
+            return normalized1 <= normalized2;
+        };
+
+        // 獲取主力 API 的最新日期
+        let majorLatestDate = null;
+        if (buyResultList && buyResultList.length > 0) {
+            // 假設 V1 欄位是日期（需根據實際 API 結構調整）
+            majorLatestDate = buyResultList[0]?.V1;
+        }
+        console.log("📅 主力 API 最新日期:", majorLatestDate, "=> 統一格式:", normalizeDateFormat(majorLatestDate));
+
+        // 獲取成交量：根據主力 API 日期和指定天數加總對應期間的成交量
+        let totalVolume = 0;
+        if (Array.isArray(tradingVolumeData) && tradingVolumeData.length > 0) {
+            // 如果主力 API 有日期，先篩選成交量數據到該日期為止
+            let filteredVolumeData = tradingVolumeData;
+            if (majorLatestDate) {
+                console.log("🔍 成交量數據第一筆:", JSON.stringify(tradingVolumeData[0]));
+
+                filteredVolumeData = tradingVolumeData.filter((item) => {
+                    const volumeDate = item.TradeDate || item.Date || item.V1 || item.date || item.tradeDate;
+                    console.log(`🔍 檢查成交量日期: ${volumeDate} vs 主力日期: ${majorLatestDate} => ${normalizeDateFormat(volumeDate)} <= ${normalizeDateFormat(majorLatestDate)}`);
+                    // 比較日期（統一格式後），確保成交量日期 <= 主力日期
+                    const result = compareDates(volumeDate, majorLatestDate);
+                    console.log(`   結果: ${result}`);
+                    return result;
+                });
+                console.log(`📊 篩選後成交量數據長度: ${filteredVolumeData.length} (原本: ${tradingVolumeData.length})`);
+            }
+
+            // 取最後 N 天的成交量並加總
+            const daysToSum = Math.min(days, filteredVolumeData.length);
+            for (let i = 0; i < daysToSum; i++) {
+                const volume = filteredVolumeData[filteredVolumeData.length - 1 - i]?.Trading_Volume || 0;
+                totalVolume += volume;
+            }
+        }
+
+        console.log(`💰 totalBuyStocks: ${totalBuyStocks}, totalSellStocks: ${totalSellStocks}, totalVolume: ${totalVolume}`);
+
+        if (totalVolume === 0) {
+            console.warn("⚠️ totalVolume is 0, cannot calculate ratio");
+            return null;
+        }
+
+        // 計算買賣占比: (買超 - (賣超絕對值)) / 成交量 * 100
+        const majorRatio = (((totalBuyStocks - Math.abs(totalSellStocks)) / totalVolume) * 100).toFixed(2);
+
+        const result = {
+            majorRatio: Number.parseFloat(majorRatio),
+            totalBuyStocks,
+            totalSellStocks,
+            totalVolume,
+        };
+
+        console.log("✅ 計算結果:", result);
+        return result;
+    }
+
+    /**
+     * 📊 從成交量 API 提取數據
+     */
+    function fetchTradingVolume(url) {
+        return new Promise((resolve) => {
+            const timeoutId = setTimeout(() => {
+                console.warn("🔴 成交量 API 超時:", url);
                 resolve([]);
+            }, FETCH_TIMEOUT);
+
+            try {
+                console.log("📡 正在請求成交量 API:", url);
+                const token = localStorage.getItem(VOLUME_API_TOKEN_KEY) || DEFAULT_VOLUME_TOKEN;
+
+                chrome.runtime.sendMessage(
+                    {
+                        action: "fetch",
+                        url: url,
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            accept: "application/json",
+                        },
+                    },
+                    (response) => {
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.error("🔴 Runtime error:", chrome.runtime.lastError);
+                            resolve([]);
+                            return;
+                        }
+                        if (response?.success) {
+                            try {
+                                const data = JSON.parse(response.data);
+                                console.log("✅ 成交量 API 回應:", data);
+
+                                // finmindtrade 返回 { msg, status, data: [...] }
+                                if (data.data && Array.isArray(data.data)) {
+                                    console.log(`✅ 成交量數據: ${data.data.length} 筆記錄`);
+                                    if (data.data.length > 0) {
+                                        console.log("📅 最新交易日期:", data.data[data.data.length - 1]?.date);
+                                        console.log("📊 最新成交量:", data.data[data.data.length - 1]?.Trading_Volume);
+                                    }
+                                    resolve(data.data);
+                                } else {
+                                    console.warn("⚠️ 成交量 API 無有效數據:", data);
+                                    resolve([]);
+                                }
+                            } catch (e) {
+                                console.error("🔴 JSON parse error:", e);
+                                console.error("原始回應:", response.data);
+                                resolve([]);
+                            }
+                        } else {
+                            console.error("🔴 成交量 API 請求失敗:", response?.error || "Unknown error");
+                            resolve([]);
+                        }
+                    }
+                );
+            } catch (e) {
+                clearTimeout(timeoutId);
+                console.error("🔴 Exception:", e);
+                resolve([]);
+            }
+        });
+    }
+
+    /**
+     * 🌐 網路請求封裝 (主力買賣超)：返回 API 結果集物件
+     */
+    function fetchMajorBuySell(url) {
+        return new Promise((resolve) => {
+            const timeoutId = setTimeout(() => {
+                console.warn("🔴 主力買賣超 Timeout:", url);
+                resolve(null);
+            }, FETCH_TIMEOUT);
+
+            try {
+                chrome.runtime.sendMessage({ action: "fetch", url: url }, (response) => {
+                    clearTimeout(timeoutId);
+                    if (chrome.runtime.lastError) {
+                        console.error("🔴 Runtime error:", chrome.runtime.lastError);
+                        resolve(null);
+                        return;
+                    }
+                    if (response?.success) {
+                        try {
+                            // majorBuySell API 返回 { ResultSet: { Result: [...] } }
+                            const data = JSON.parse(response.data);
+                            console.log("✅ 主力買賣超 API 回應:", data);
+                            resolve(data);
+                        } catch (e) {
+                            console.error("🔴 JSON parse error:", e);
+                            resolve(null);
+                        }
+                    } else {
+                        console.error("🔴 Fetch failed for:", url, response?.error);
+                        resolve(null);
+                    }
+                });
+            } catch (e) {
+                clearTimeout(timeoutId);
+                console.error("🔴 Exception:", e);
+                resolve(null);
             }
         });
     }
@@ -1296,6 +1743,15 @@
         };
         btnContainer.appendChild(popoutBtn);
 
+        // 新增：Token 設置按鈕
+        const tokenBtn = document.createElement("button");
+        tokenBtn.textContent = "🔑 Token";
+        tokenBtn.className = "custom-analysis-btn";
+        tokenBtn.style.marginLeft = "6px";
+        tokenBtn.title = "設置成交量 API Token";
+        tokenBtn.onclick = createTokenSettingModal;
+        btnContainer.appendChild(tokenBtn);
+
         // 新增：顯示/隱藏資訊卡片的滑動開關
         const isVisible = localStorage.getItem("fugle-info-visible") !== "false";
         const toggleWrapper = document.createElement("div");
@@ -1662,6 +2118,43 @@
                 top: 74px;
                 background-color: var(--fugle-card-bg);
                 z-index: 15;
+            }
+
+            /* Token Modal Styles */
+            #fugle-token-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 10000;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                padding-top: 100px;
+                backdrop-filter: blur(2px);
+            }
+            .token-modal-content {
+                background: #252526;
+                width: 500px;
+                max-width: 90%;
+                border-radius: 8px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                border: 1px solid #444;
+                display: flex;
+                flex-direction: column;
+            }
+            .token-modal-header {
+                padding: 16px;
+                border-bottom: 1px solid #333;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                color: #fff;
+            }
+            .token-modal-body {
+                padding: 16px;
             }
         `;
         document.head.appendChild(style);
