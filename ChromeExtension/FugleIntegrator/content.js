@@ -23,6 +23,8 @@
     // 本地 JSON 資料庫（概念股、產業、集團）
     let stockDatabase = null;
     let dbLoadPromise = null;
+    // 日期時間顯示已初始化標誌
+    let isDateTimeInitialized = false;
 
     /**
      * 🔧 防抖動函式：避免短時間內重複觸發
@@ -102,17 +104,28 @@
 
         const stockIds = categories.filter((cat) => cat.分類類型 === categoryType && cat.分類名稱 === categoryName).map((cat) => cat.股票代碼);
 
-        // 去重並限制數量
+        // 去重
         let unique = [...new Set(stockIds)];
-        if (limit) unique = unique.slice(0, limit);
 
-        // 取得股票名稱
-        return unique
+        // 取得股票名稱與股本
+        let stocks = unique
             .map((id) => {
                 const info = basicInfo.find((b) => b.股票代碼 === id);
-                return { code: id, name: info?.股票名稱 || "未知" };
+                return {
+                    code: id,
+                    name: info?.股票名稱 || "未知",
+                    capital: info?.["股本_億元"] || 0,
+                };
             })
             .filter((v) => v.name !== "未知");
+
+        // 依股本由大到小排序
+        stocks.sort((a, b) => b.capital - a.capital);
+
+        // 限制數量
+        if (limit) stocks = stocks.slice(0, limit);
+
+        return stocks;
     }
 
     /**
@@ -160,6 +173,112 @@
     };
 
     /**
+     * � 初始化日期時間更新
+     */
+    const initDateTimeDisplay = () => {
+        // 防止重複初始化定時器
+        if (isDateTimeInitialized) return;
+
+        const marketEl = document.querySelector(".tw-market");
+        if (!marketEl) return;
+
+        // 檢查是否已經添加過日期時間顯示
+        let dateTimeContainer = marketEl.nextElementSibling;
+        if (!dateTimeContainer || !dateTimeContainer.id?.startsWith("datetime-display")) {
+            // 創建日期時間容器
+            dateTimeContainer = document.createElement("div");
+            dateTimeContainer.id = "datetime-display-" + Date.now();
+            dateTimeContainer.style.cssText = `
+                margin-top: 6px;
+                padding: 6px 12px;
+                background: linear-gradient(135deg, rgba(255, 159, 67, 0.08), rgba(52, 152, 219, 0.08));
+                border-left: 3px solid var(--fugle-accent, #ff9f43);
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 500;
+                color: #aaa;
+                font-family: "SF Mono", "Monaco", "Consolas", "Courier New", monospace;
+                letter-spacing: 0.5px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            `;
+
+            marketEl.parentElement?.appendChild(dateTimeContainer);
+        }
+
+        // 是否顯示完整日期
+        let showFullDate = false;
+
+        // 更新日期時間
+        const updateDateTime = () => {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, "0");
+            const day = String(now.getDate()).padStart(2, "0");
+            const hour = String(now.getHours()).padStart(2, "0");
+            const minute = String(now.getMinutes()).padStart(2, "0");
+            const second = String(now.getSeconds()).padStart(2, "0");
+
+            // 獲取星期幾
+            const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+            const weekday = weekdays[now.getDay()];
+
+            if (showFullDate) {
+                // 懸停時顯示完整日期
+                dateTimeContainer.innerHTML = `
+                    <span style="color: #ff9f43; font-weight: 600; margin-right: 4px;">📅</span>
+                    <span style="color: #ddd; font-weight: 600;">${year}</span>
+                    <span style="color: #888;">-</span>
+                    <span style="color: #ddd;">${month}</span>
+                    <span style="color: #888;">-</span>
+                    <span style="color: #ddd;">${day}</span>
+                    <span style="color: #888; margin: 0 6px;">|</span>
+                    <span style="color: #aaa; font-size: 11px;">週${weekday}</span>
+                    <span style="color: #888; margin: 0 6px;">|</span>
+                    <span style="color: #ff9f43; font-weight: 600; margin-right: 2px;">🕐</span>
+                    <span style="color: #ddd; font-weight: 600;">${hour}</span>
+                    <span style="color: #888;">:</span>
+                    <span style="color: #ddd; font-weight: 600;">${minute}</span>
+                    <span style="color: #888;">:</span>
+                    <span style="color: #ddd;">${second}</span>
+                `;
+            } else {
+                // 默認只顯示時分秒
+                dateTimeContainer.innerHTML = `
+                    <span style="color: #ff9f43; font-weight: 600; margin-right: 2px;">🕐</span>
+                    <span style="color: #ddd; font-weight: 600;">${hour}</span>
+                    <span style="color: #888;">:</span>
+                    <span style="color: #ddd; font-weight: 600;">${minute}</span>
+                    <span style="color: #888;">:</span>
+                    <span style="color: #ddd;">${second}</span>
+                `;
+            }
+        };
+
+        // 添加懸停事件：顯示完整日期
+        dateTimeContainer.addEventListener("mouseenter", () => {
+            showFullDate = true;
+            dateTimeContainer.style.background = "linear-gradient(135deg, rgba(255, 159, 67, 0.12), rgba(52, 152, 219, 0.12))";
+            dateTimeContainer.style.transform = "translateX(2px)";
+            updateDateTime();
+        });
+        dateTimeContainer.addEventListener("mouseleave", () => {
+            showFullDate = false;
+            dateTimeContainer.style.background = "linear-gradient(135deg, rgba(255, 159, 67, 0.08), rgba(52, 152, 219, 0.08))";
+            dateTimeContainer.style.transform = "translateX(0)";
+            updateDateTime();
+        });
+
+        updateDateTime();
+        // 每秒更新一次（僅初始化一次）
+        setInterval(updateDateTime, 1000);
+        isDateTimeInitialized = true;
+    };
+
+    /**
      * 🚀 初始化整合器：從富果頁面 DOM 抓取當前股票資訊並觸發渲染
      */
     const initIntegration = (forceRefresh = false) => {
@@ -169,6 +288,9 @@
         const market = document.querySelector(".card-group-header__info__market")?.textContent?.trim();
         const stockName = document.querySelector(".stock-name")?.textContent?.trim();
         const container = document.querySelector(".card-group-header__upper-left");
+
+        // 初始化日期時間顯示
+        initDateTimeDisplay();
 
         // 如果沒抓到代號則跳過
         if (!stockId) return;
@@ -187,6 +309,7 @@
 
         // 清除舊有的 UI 元素，避免重複顯示
         document.querySelectorAll("#custom-btn-group").forEach((el) => el.remove());
+        document.querySelectorAll("#estimated-volume").forEach((el) => el.remove());
 
         // 插入自定義按鈕選單與渲染詳細資訊卡片
         insertButtonMenu(container, stockId, market, stockName);
@@ -831,6 +954,7 @@
             // 2. 搜尋個股
             const matchedStocks = basicInfo
                 .filter((s) => s.股票代碼.includes(keyword) || s.股票名稱.toLowerCase().includes(keyword))
+                .sort((a, b) => (b["股本_億元"] || 0) - (a["股本_億元"] || 0))
                 .slice(0, 20) // 限制顯示數量
                 .map((s) => ({
                     type: "個股",
@@ -967,6 +1091,106 @@
         const btnContainer = document.createElement("div");
         btnContainer.id = "custom-btn-group";
         btnContainer.style.cssText = `display: flex; align-items: center; gap: 6px; margin-left: 12px; flex-wrap: wrap;`;
+
+        // 新增：預估成交量
+        const estimateSpan = document.createElement("span");
+        estimateSpan.id = "estimated-volume";
+        estimateSpan.style.cssText = "font-size: 13px; color: #f1c40f; margin-left: 8px; font-weight: bold; background: rgba(241, 196, 15, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(241, 196, 15, 0.3);";
+
+        const updateEstimate = () => {
+            const volumeEl = document.querySelector(".card-group-header__volume span:nth-child(2)");
+            if (!volumeEl) return;
+
+            const currentVolume = parseFloat(volumeEl.textContent.replace(/,/g, "").replace("張", "").trim());
+            if (isNaN(currentVolume)) return;
+
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            let multiplier = 1;
+
+            // Time-based multiplier logic
+            if (hour === 9) {
+                if (minute >= 15 && minute < 20) multiplier = 8;
+                else if (minute >= 20 && minute < 25) multiplier = 7.5;
+                else if (minute >= 25 && minute < 30) multiplier = 7;
+                else if (minute >= 30 && minute < 35) multiplier = 5;
+                else if (minute >= 35 && minute < 40) multiplier = 4.75;
+                else if (minute >= 40 && minute < 45) multiplier = 4.5;
+                else if (minute >= 45 && minute < 50) multiplier = 4;
+                else if (minute >= 50 && minute < 55) multiplier = 3.75;
+                else if (minute >= 55) multiplier = 3.5;
+            } else if (hour === 10) {
+                if (minute < 5) multiplier = 3;
+                else if (minute < 10) multiplier = 2.9;
+                else if (minute < 15) multiplier = 2.8;
+                else if (minute < 20) multiplier = 2.5;
+                else if (minute < 25) multiplier = 2.4;
+                else if (minute < 30) multiplier = 2.3;
+                else if (minute < 35) multiplier = 2.2;
+                else if (minute < 40) multiplier = 2.1;
+                else if (minute < 45) multiplier = 2;
+                else if (minute < 50) multiplier = 1.95;
+                else if (minute < 55) multiplier = 1.9;
+                else multiplier = 1.85;
+            } else if (hour === 11) {
+                if (minute < 5) multiplier = 1.8;
+                else if (minute < 10) multiplier = 1.75;
+                else if (minute < 15) multiplier = 1.7;
+                else if (minute < 20) multiplier = 1.68;
+                else if (minute < 25) multiplier = 1.66;
+                else if (minute < 30) multiplier = 1.64;
+                else if (minute < 35) multiplier = 1.6;
+                else if (minute < 40) multiplier = 1.58;
+                else if (minute < 45) multiplier = 1.55;
+                else if (minute < 50) multiplier = 1.52;
+                else if (minute < 55) multiplier = 1.5;
+                else multiplier = 1.48;
+            } else if (hour === 12) {
+                if (minute < 5) multiplier = 1.45;
+                else if (minute < 10) multiplier = 1.42;
+                else if (minute < 15) multiplier = 1.38;
+                else if (minute < 20) multiplier = 1.36;
+                else if (minute < 25) multiplier = 1.34;
+                else if (minute < 30) multiplier = 1.32;
+                else if (minute < 35) multiplier = 1.3;
+                else if (minute < 40) multiplier = 1.28;
+                else if (minute < 45) multiplier = 1.25;
+                else if (minute < 50) multiplier = 1.23;
+                else if (minute < 55) multiplier = 1.22;
+                else multiplier = 1.2;
+            } else if (hour === 13) {
+                if (minute < 5) multiplier = 1.18;
+                else if (minute < 10) multiplier = 1.16;
+                else if (minute < 15) multiplier = 1.13;
+                else if (minute < 20) multiplier = 1.12;
+                else if (minute < 25) multiplier = 1.11;
+                else if (minute < 30) multiplier = 1.1;
+                else multiplier = 1;
+            } else {
+                multiplier = 1;
+            }
+
+            const estimatedVolume = Math.floor(currentVolume * multiplier);
+            estimateSpan.textContent = `預估量: ${estimatedVolume.toLocaleString()} 張`;
+        };
+
+        updateEstimate();
+        const intervalId = setInterval(() => {
+            if (!document.body.contains(estimateSpan)) {
+                clearInterval(intervalId);
+                return;
+            }
+            updateEstimate();
+        }, 1000);
+
+        // 嘗試將預估量放入 card-group-header__volume-and-time
+        const volumeTimeContainer = document.querySelector(".card-group-header__volume-and-time");
+        if (volumeTimeContainer) {
+            volumeTimeContainer.appendChild(estimateSpan);
+        } else {
+            btnContainer.appendChild(estimateSpan);
+        }
 
         // 定義按鈕清單與對應的 URL 生成邏輯
         const links = [
@@ -1233,8 +1457,8 @@
             }
             #stock-info-card.fixed-mode {
                 position: fixed;
-                top: 80px;
-                width: 340px;
+                top: 100px;
+                width: 500px;
                 z-index: 9999;
                 max-height: 80vh;
                 overflow-y: auto;
