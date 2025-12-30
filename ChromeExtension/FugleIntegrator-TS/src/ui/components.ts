@@ -413,26 +413,27 @@ export function createMajorContent(major1Ratio: MajorRatioResult | null, major5R
 
     // 生成四欄網格佈局的主力買賣卡片
     return `
+        <div style="font-size: 13px; color: #888; margin-bottom: 8px; font-weight: 600;">最後更新日期：${major1Ratio?.date || major5Ratio?.date || major10Ratio?.date || major20Ratio?.date}</div>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
             <div style="background: rgba(255, 77, 79, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #ff4d4f;">
                 <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主1買賣占比</div>
                 <div style="font-size: 16px; font-weight: bold; color: #fff;">${formatMajorRatio(major1Ratio)}</div>
-                ${major1Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major1Ratio.totalBuyStocks / 10000).toFixed(2)} 張｜賣${(major1Ratio.totalSellStocks / 10000).toFixed(2)} 張</div>` : ""}
+                ${major1Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major1Ratio.totalBuyStocks / 1000).toFixed(2)} 張｜賣${(major1Ratio.totalSellStocks / 1000).toFixed(2)} 張</div>` : ""}
             </div>
             <div style="background: rgba(255, 159, 67, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #ff9f43;">
                 <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主5買賣占比</div>
                 <div style="font-size: 16px; font-weight: bold; color: #fff;">${formatMajorRatio(major5Ratio)}</div>
-                ${major5Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major5Ratio.totalBuyStocks / 10000).toFixed(2)} 張｜賣${(major5Ratio.totalSellStocks / 10000).toFixed(2)} 張</div>` : ""}
+                ${major5Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major5Ratio.totalBuyStocks / 1000).toFixed(2)} 張｜賣${(major5Ratio.totalSellStocks / 1000).toFixed(2)} 張</div>` : ""}
             </div>
             <div style="background: rgba(52, 152, 219, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #3498db;">
                 <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主10買賣占比</div>
                 <div style="font-size: 16px; font-weight: bold; color: #fff;">${formatMajorRatio(major10Ratio)}</div>
-                ${major10Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major10Ratio.totalBuyStocks / 10000).toFixed(2)} 張｜賣${(major10Ratio.totalSellStocks / 10000).toFixed(2)} 張</div>` : ""}
+                ${major10Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major10Ratio.totalBuyStocks / 1000).toFixed(2)} 張｜賣${(major10Ratio.totalSellStocks / 1000).toFixed(2)} 張</div>` : ""}
             </div>
             <div style="background: rgba(155, 89, 182, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #9b59b6;">
                 <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主20買賣占比</div>
                 <div style="font-size: 16px; font-weight: bold; color: #fff;">${formatMajorRatio(major20Ratio)}</div>
-                ${major20Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major20Ratio.totalBuyStocks / 10000).toFixed(2)} 張｜賣${(major20Ratio.totalSellStocks / 10000).toFixed(2)} 張</div>` : ""}
+                ${major20Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major20Ratio.totalBuyStocks / 1000).toFixed(2)} 張｜賣${(major20Ratio.totalSellStocks / 1000).toFixed(2)} 張</div>` : ""}
             </div>
         </div>`;
 }

@@ -31,21 +31,27 @@
  *
  * 大多數玉山 API 使用此格式包裝回應資料。
  *
- * @template T - Result 陣列中每個項目的類型
+ *
  *
  * 📌 典型 API 回應結構：
  * ```json
- * {
+ * [
  *   "ResultSet": {
  *     "Result": [
  *       { "V1": "台積電", "V2": "2330", ... },
  *       ...
  *     ]
- *   }
- * }
+ *   },
+ *   "ResultSet": {
+ *     "Result": [
+ *       { "V1": "台積電", "V2": "2330", ... },
+ *       ...
+ *     ]
+ *   },
+ * ]
  * ```
  */
-export interface EsunResultSet<T = Record<string, string>> {
+export interface EsunResultSet<T> {
     ResultSet: {
         Result: T[];
     };
@@ -176,13 +182,24 @@ export interface CapacityItem {
  *
  * 來自 stock-chip0002-4 API 的回應結構。
  * 描述單一券商的買賣資訊。
+ *
+ * 📌 欄位對應：
+ * - V1: 日期（YYYY/MM/DD 格式）
+ * - V2: 券商代碼
+ * - V3: 券商名稱
+ * - V4: 買進股數
+ * - V5: 賣出股數
+ * - V6: LotSize（每張數量，通常為 1000）
+ * - V7: 當日交易總股數
  */
 export interface MajorBuySellItem {
-    V1?: string; // 日期
+    V1?: string; // 日期（YYYY/MM/DD）
     V2?: string; // 券商代碼
     V3?: string; // 券商名稱
-    V4: string; // 買進張數
-    V5: string; // 賣出張數
+    V4: string; // 買進股數
+    V5: string; // 賣出股數
+    V6?: string; // LotSize（通常 1000）
+    V7?: string; // 當日交易總股數
 }
 
 /**
@@ -312,6 +329,8 @@ export interface SectionState {
  * calculateMajorRatio() 函式的返回類型。
  */
 export interface MajorRatioResult {
+    /** 日期 */
+    date: string;
     /** 主力買賣占成交量比率 (%)，正為買超、負為賣超 */
     majorRatio: number;
     /** 總買進股數 */

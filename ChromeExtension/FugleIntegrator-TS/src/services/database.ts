@@ -66,26 +66,24 @@ let dbLoadPromise: Promise<StockDatabase | null> | null = null;
  */
 export function loadStockDatabase(): Promise<StockDatabase | null> {
     // 如果已有載入中或已完成的 Promise，直接返回
-    if (!dbLoadPromise) {
-        dbLoadPromise = new Promise((resolve) => {
-            // 使用 Chrome 擴充功能 API 取得本地檔案路徑
-            const dbPath = chrome.runtime.getURL("stock-data.json");
+    dbLoadPromise ??= new Promise((resolve) => {
+        // 從遠端 API 取得股票資料庫
+        const dbUrl = "https://raw.githubusercontent.com/Yuno-Liu/Fugle-Integrator-Extension/refs/heads/main/ChromeExtension/FugleIntegrator-TS/stock-data.json";
 
-            fetch(dbPath)
-                .then((res) => res.json())
-                .then((data: StockDatabase) => {
-                    // 儲存至模組快取
-                    stockDatabase = data;
-                    console.log("✅ Stock database loaded:", data.basicInfo.length, "stocks,", data.categories.length, "categories");
-                    resolve(data);
-                })
-                .catch((e) => {
-                    // 載入失敗時記錄錯誤但不拋出，返回 null
-                    console.error("Failed to load stock database:", e);
-                    resolve(null);
-                });
-        });
-    }
+        fetch(dbUrl)
+            .then((res) => res.json())
+            .then((data: StockDatabase) => {
+                // 儲存至模組快取
+                stockDatabase = data;
+                console.log("✅ Stock database loaded:", data.basicInfo.length, "stocks,", data.categories.length, "categories");
+                resolve(data);
+            })
+            .catch((e) => {
+                // 載入失敗時記錄錯誤但不拋出，返回 null
+                console.error("Failed to load stock database:", e);
+                resolve(null);
+            });
+    });
     return dbLoadPromise;
 }
 

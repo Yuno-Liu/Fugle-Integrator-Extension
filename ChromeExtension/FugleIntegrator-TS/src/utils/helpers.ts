@@ -452,13 +452,32 @@ export function fetchTradingVolume(url: string): Promise<TradingVolumeItem[]> {
  * 本函式會在 Console 輸出詳細的日期信息，幫助診斷數據可用性。
  *
  * @param url - 主力買賣超 API URL
- * @returns 完整的 ResultSet 結構，或 null
+ * @returns API 返回的陣列結構：[買超ResultSet, 賣超ResultSet]，或 null
+ *
+ * 📌 API 回應格式：
+ * ```json
+ * [
+ *   {
+ *     "ResultSet": {
+ *       "Result": [
+ *         { "V1": "日期", "V2": "券商代碼", "V3": "券商名稱", "V4": "買超", "V5": "賣超", "V6": "LotSize", "V7": "總股數" },
+ *         ...
+ *       ]
+ *     }
+ *   },
+ *   {
+ *     "ResultSet": {
+ *       "Result": [...]
+ *     }
+ *   }
+ * ]
+ * ```
  *
  * 📌 診斷信息：
  * - 如果 API 返回數據，會顯示最新的 10 筆交易日期
  * - 幫助您判斷當前時間點是否有可用的主力數據
  */
-export function fetchMajorBuySell(url: string): Promise<EsunResultSet<MajorBuySellItem> | null> {
+export function fetchMajorBuySell(url: string): Promise<EsunResultSet<MajorBuySellItem>[] | null> {
     return new Promise((resolve) => {
         const timeoutId = setTimeout(() => {
             console.warn("🔴 主力買賣超 Timeout:", url);
@@ -476,17 +495,23 @@ export function fetchMajorBuySell(url: string): Promise<EsunResultSet<MajorBuySe
                 }
                 if (response?.success) {
                     try {
-                        const data = JSON.parse(response.data || "{}") as EsunResultSet<MajorBuySellItem>;
+                        const data = JSON.parse(response.data || "[]") as EsunResultSet<MajorBuySellItem>[];
 
                         // === 診斷信息：顯示最新的數據日期 ===
-                        if (data?.ResultSet?.Result && data.ResultSet.Result.length > 0) {
-                            const latestResults = data.ResultSet.Result.slice(0, 10);
-                            const dates = latestResults.map((r) => r.V1).join(", ");
-                            console.log(`✅ 主力買賣超 API 回應成功，最新 10 筆日期: ${dates}`);
-                            console.log(`   💾 資料筆數: ${data.ResultSet.Result.length}`);
-                            console.log(`   📅 最新日期: ${data.ResultSet.Result[0]?.V1}`);
+                        if (Array.isArray(data) && data.length > 0) {
+                            // 取第一個 ResultSet（買超數據）進行診斷
+                            const buyData = data[0]?.ResultSet?.Result;
+                            if (buyData && buyData.length > 0) {
+                                const latestResults = buyData.slice(0, 10);
+                                const dates = latestResults.map((r) => r.V1).join(", ");
+                                console.log(`✅ 主力買賣超 API 回應成功，最新 10 筆日期: ${dates}`);
+                                console.log(`   💾 買超資料筆數: ${buyData.length}`);
+                                console.log(`   📅 最新日期: ${buyData[0]?.V1}`);
+                            } else {
+                                console.warn("⚠️ 主力買賣超 API 返回空結果");
+                            }
                         } else {
-                            console.warn("⚠️ 主力買賣超 API 返回空結果");
+                            console.warn("⚠️ 主力買賣超 API 返回空陣列");
                         }
 
                         resolve(data);
@@ -522,7 +547,10 @@ export function fetchMajorBuySell(url: string): Promise<EsunResultSet<MajorBuySe
  * - 如果該日期沒有成交量數據，自動回退到前一筆有數據的日期
  * - 支援跨多日期計算（例如 5 日買賣占比）
  *
- * @param majorBuySellData - 主力買賣超數據（支援多種格式）
+ * @param majorBuySellData - 主力買賣超數據，支援以下格式：
+ *                          1. 陣列形式：[買超ResultSet, 賣超ResultSet]（API 原始格式）
+ *                          2. 單個 ResultSet 物件
+ *                          3. 直接的項目陣列
  * @param tradingVolumeData - 成交量數據
  * @param days - 計算天數，預設 1 天
  * @returns 計算結果，或 null（若資料不足）
@@ -530,35 +558,38 @@ export function fetchMajorBuySell(url: string): Promise<EsunResultSet<MajorBuySe
  * 📌 計算公式：
  * majorRatio = (總買超 - 總賣超) / 區間成交量 × 100
  *
- * 📌 支援的資料格式：
- * 1. 陣列形式：[買超ResultSet, 賣超ResultSet]
- * 2. 單個 ResultSet 物件
- * 3. 直接的項目陣列
+ * 📌 支援的資料格式範例：
+ * ```typescript
+ * // 格式 1: API 原始陣列形式
+ * const data = [
+ *   { ResultSet: { Result: [買超列表] } },
+ *   { ResultSet: { Result: [賣超列表] } }
+ * ];
+ *
+ * // 格式 2: 單個 ResultSet
+ * const data = { ResultSet: { Result: [買超列表] } };
+ *
+ * // 格式 3: 直接陣列
+ * const data = [買超項目1, 買超項目2, ...];
+ * ```
  */
-export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySellItem> | MajorBuySellItem[] | null, tradingVolumeData: TradingVolumeItem[], days: number = 1): MajorRatioResult | null {
+export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySellItem>[] | EsunResultSet<MajorBuySellItem> | MajorBuySellItem[] | null, tradingVolumeData: TradingVolumeItem[], days: number = 1): MajorRatioResult | null {
     if (!majorBuySellData) {
         console.warn("⚠️ majorBuySellData is null or undefined");
         return null;
     }
-
+    debugger;
     let buyResultList: MajorBuySellItem[] | null = null;
     let sellResultList: MajorBuySellItem[] | null = null;
 
     // === 解析不同格式的主力買賣數據 ===
 
-    // 結構1: 陣列形式 [買超ResultSet, 賣超ResultSet]
-    if (Array.isArray(majorBuySellData) && majorBuySellData.length >= 2) {
-        const arr = majorBuySellData as unknown as EsunResultSet<MajorBuySellItem>[];
+    // 結構1: 陣列形式 [買超ResultSet, 賣超ResultSet]（API 原始格式）
+    if (Array.isArray(majorBuySellData) && majorBuySellData.length >= 2 && "ResultSet" in majorBuySellData[0]) {
+        const arr = majorBuySellData as EsunResultSet<MajorBuySellItem>[];
         buyResultList = arr[0]?.ResultSet?.Result ?? null;
         sellResultList = arr[1]?.ResultSet?.Result ?? null;
-    }
-    // 結構2: 單個 ResultSet 物件
-    else if ("ResultSet" in majorBuySellData) {
-        buyResultList = majorBuySellData.ResultSet.Result;
-    }
-    // 結構3: 直接是項目陣列
-    else if (Array.isArray(majorBuySellData)) {
-        buyResultList = majorBuySellData;
+        console.log(`📊 解析 API 原始陣列格式：買超 ${buyResultList?.length ?? 0} 筆、賣超 ${sellResultList?.length ?? 0} 筆`);
     }
 
     if (!buyResultList || buyResultList.length === 0) {
@@ -586,7 +617,10 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
             V1: sampleItem.V1,
             Trading_Volume: sampleItem.Trading_Volume,
         });
-        console.log(`📊 最新的 5 個成交量日期:`, tradingVolumeData.slice(0, 5).map((item) => item.date || item.Date || item.TradeDate || item.tradeDate || item.V1));
+        console.log(
+            `📊 最新的 5 個成交量日期:`,
+            tradingVolumeData.slice(0, 5).map((item) => item.date || item.Date || item.TradeDate || item.tradeDate || item.V1)
+        );
     } else {
         console.warn("⚠️ 成交量數據為空！可能原因：API Token 無效、API 請求失敗或無可用數據");
     }
@@ -602,7 +636,13 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
         console.log(`  🔎 搜尋日期: ${date} (正規化: ${normalized})`);
 
         // 逐一嘗試多種日期欄位格式
-        for (const item of tradingVolumeData) {
+        // 將 tradingVolumeData 日期排序大至小，優先匹配最新日期
+        const sortedVolumeData = [...tradingVolumeData].sort((a, b) => {
+            const dateA = normalizeDateFormat(a.date || a.Date || a.TradeDate || a.tradeDate || a.V1) || "";
+            const dateB = normalizeDateFormat(b.date || b.Date || b.TradeDate || b.tradeDate || b.V1) || "";
+            return dateB.localeCompare(dateA);
+        });
+        for (const item of sortedVolumeData) {
             const dateFields = [item.date, item.Date, item.TradeDate, item.tradeDate, item.V1];
             for (const dateField of dateFields) {
                 if (dateField) {
@@ -649,7 +689,7 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
         // 檢查該日期是否有成交量數據
         if (isValid) {
             validMajorDate = date;
-            selectedBuyList = buyResultList.slice(0, Math.min(days, buyResultList.length));
+            selectedBuyList = buyResultList;
             console.log(`✅ 找到有效日期: ${validMajorDate}, 對應的買超列表長度: ${selectedBuyList.length}`);
             break;
         }
@@ -658,7 +698,10 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
     if (!validMajorDate) {
         console.error("🔴 未找到有效的主力交易日期，所有查詢的日期都沒有成交量數據");
         console.error("   檢查清單:");
-        console.error("   1️⃣ 主力 API 返回的日期:", buyResultList.slice(0, 5).map((r) => r.V1));
+        console.error(
+            "   1️⃣ 主力 API 返回的日期:",
+            buyResultList.slice(0, 5).map((r) => r.V1)
+        );
         console.error("   2️⃣ 成交量數據的日期範圍:", {
             最新: tradingVolumeData[0]?.date || tradingVolumeData[0]?.Date || tradingVolumeData[0]?.TradeDate,
             最舊: tradingVolumeData[tradingVolumeData.length - 1]?.date || tradingVolumeData[tradingVolumeData.length - 1]?.Date,
@@ -676,14 +719,14 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
 
     // === 計算買超總量 ===
     selectedBuyList.forEach((item) => {
-        const buy = parseFloat(item.V4) || 0; // 買進張數
-        const sell = parseFloat(item.V5) || 0; // 賣出張數
+        const buy = parseFloat(item.V4) || 0; // 買進股數
+        const sell = parseFloat(item.V5) || 0; // 賣出股數
         totalBuyStocks += buy - sell; // 淨買超
     });
 
     // === 計算賣超總量（若有） ===
     if (sellResultList && sellResultList.length > 0) {
-        const selectedSellList = sellResultList.slice(0, Math.min(days, sellResultList.length));
+        const selectedSellList = sellResultList;
         selectedSellList.forEach((item) => {
             const buy = parseFloat(item.V4) || 0;
             const sell = parseFloat(item.V5) || 0;
@@ -727,6 +770,7 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
     console.log(`📈 主力買賣占比計算完成: ${majorRatio}% (買超: ${totalBuyStocks}, 賣超: ${totalSellStocks}, 成交量: ${totalVolume})`);
 
     return {
+        date: validMajorDate,
         majorRatio,
         totalBuyStocks,
         totalSellStocks,

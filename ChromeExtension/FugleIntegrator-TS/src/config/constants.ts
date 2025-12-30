@@ -225,14 +225,14 @@ export const API_URLS: ApiUrls = {
     /**
      * 成交量數據
      * @param id - 股票代碼
-     * @returns 過去 20 天的每日成交量數據
+     * @returns 過去 80 天的每日成交量數據
      * @note 使用 finmindtrade API，需要認證 Token
-     * @note 日期範圍動態計算：當日往前 20 天
+     * @note 日期範圍動態計算：當日往前 80 天
      */
     tradingVolume: (id: string) => {
-        // 計算日期範圍：當日和 20 天前
+        // 計算日期範圍：當日和 80 天前
         const endDate = new Date().toISOString().split("T")[0];
-        const startDate = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        const startDate = new Date(Date.now() - 80 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
         return `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${id}&start_date=${startDate}&end_date=${endDate}`;
     },
 };
