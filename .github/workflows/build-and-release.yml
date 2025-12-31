@@ -11,6 +11,8 @@ jobs:
     build-fugle:
         runs-on: ubuntu-latest
         if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/fugle-v')
+        permissions:
+            contents: write
 
         steps:
             - name: Checkout code
@@ -65,6 +67,8 @@ jobs:
     build-gemini:
         runs-on: ubuntu-latest
         if: startsWith(github.ref, 'refs/tags/gemini-v')
+        permissions:
+            contents: write
 
         steps:
             - name: Checkout code
@@ -119,6 +123,8 @@ jobs:
     build-both:
         runs-on: ubuntu-latest
         if: startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/fugle-v') && !startsWith(github.ref, 'refs/tags/gemini-v')
+        permissions:
+            contents: write
 
         steps:
             - name: Checkout code
