@@ -1,195 +1,191 @@
 name: Build and Release Chrome Extensions
 
 on:
-  push:
-    tags:
-      - 'v*'
-      - 'fugle-v*'
-      - 'gemini-v*'
+    push:
+        tags:
+            - "v*"
+            - "fugle-v*"
+            - "gemini-v*"
 
 jobs:
-  build-fugle:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/fugle-v')
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'ChromeExtension/FugleIntegrator-TS/package-lock.json'
-      
-      - name: Install dependencies
-        working-directory: ChromeExtension/FugleIntegrator-TS
-        run: npm ci
-      
-      - name: Build extension
-        working-directory: ChromeExtension/FugleIntegrator-TS
-        run: npm run build
-      
-      - name: Create zip archive
-        working-directory: ChromeExtension/FugleIntegrator-TS
-        run: |
-          mkdir -p ../../releases
-          zip -r ../../releases/FugleIntegrator-${{ github.ref_name }}.zip dist/ manifest.json stock-data.json
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: fugle-extension
-          path: releases/FugleIntegrator-*.zip
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: releases/FugleIntegrator-*.zip
-          body: |
-            ## Fugle Integrator Chrome Extension
-            
-            ### Files
-            - `FugleIntegrator-${{ github.ref_name }}.zip` - Chrome extension package
-            
-            ### Installation
-            1. Download `FugleIntegrator-${{ github.ref_name }}.zip`
-            2. Extract the archive
-            3. Open `chrome://extensions/` in Chrome
-            4. Enable "Developer mode"
-            5. Click "Load unpacked" and select the extracted folder
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    build-fugle:
+        runs-on: ubuntu-latest
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/fugle-v')
 
-  build-gemini:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/gemini-v')
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'ChromeExtension/GeminiUrlPrompt-TS/package-lock.json'
-      
-      - name: Install dependencies
-        working-directory: ChromeExtension/GeminiUrlPrompt-TS
-        run: npm ci
-      
-      - name: Build extension
-        working-directory: ChromeExtension/GeminiUrlPrompt-TS
-        run: npm run build
-      
-      - name: Create zip archive
-        working-directory: ChromeExtension/GeminiUrlPrompt-TS
-        run: |
-          mkdir -p ../../releases
-          zip -r ../../releases/GeminiUrlPrompt-${{ github.ref_name }}.zip dist/ manifest.json
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: gemini-extension
-          path: releases/GeminiUrlPrompt-*.zip
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: releases/GeminiUrlPrompt-*.zip
-          body: |
-            ## Gemini URL Prompt Chrome Extension
-            
-            ### Files
-            - `GeminiUrlPrompt-${{ github.ref_name }}.zip` - Chrome extension package
-            
-            ### Installation
-            1. Download `GeminiUrlPrompt-${{ github.ref_name }}.zip`
-            2. Extract the archive
-            3. Open `chrome://extensions/` in Chrome
-            4. Enable "Developer mode"
-            5. Click "Load unpacked" and select the extracted folder
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-  build-both:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/fugle-v') && !startsWith(github.ref, 'refs/tags/gemini-v')
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      
-      - name: Build Fugle Integrator
-        working-directory: ChromeExtension/FugleIntegrator-TS
-        run: |
-          npm ci
-          npm run build
-      
-      - name: Build Gemini URL Prompt
-        working-directory: ChromeExtension/GeminiUrlPrompt-TS
-        run: |
-          npm ci
-          npm run build
-      
-      - name: Create zip archives
-        run: |
-          mkdir -p releases
-          cd ChromeExtension/FugleIntegrator-TS
-          zip -r ../../releases/FugleIntegrator-${{ github.ref_name }}.zip dist/ manifest.json stock-data.json
-          cd ../GeminiUrlPrompt-TS
-          zip -r ../../releases/GeminiUrlPrompt-${{ github.ref_name }}.zip dist/ manifest.json
-          cd ../..
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: all-extensions
-          path: releases/
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: releases/*.zip
-          body: |
-            ## Fugle Integrator Extensions - ${{ github.ref_name }}
-            
-            ### Included Extensions
-            - **FugleIntegrator-${{ github.ref_name }}.zip** - Main Fugle Integrator Chrome extension
-            - **GeminiUrlPrompt-${{ github.ref_name }}.zip** - Gemini URL Prompt Chrome extension
-            
-            ### Installation Instructions
-            
-            #### FugleIntegrator
-            1. Download `FugleIntegrator-${{ github.ref_name }}.zip`
-            2. Extract the archive
-            3. Open `chrome://extensions/` in Chrome
-            4. Enable "Developer mode"
-            5. Click "Load unpacked" and select the extracted folder
-            
-            #### GeminiUrlPrompt
-            1. Download `GeminiUrlPrompt-${{ github.ref_name }}.zip`
-            2. Extract the archive
-            3. Open `chrome://extensions/` in Chrome
-            4. Enable "Developer mode"
-            5. Click "Load unpacked" and select the extracted folder
-            
-            ### Release Notes
-            Please refer to the commit messages for detailed changes in this release.
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+
+            - name: Install dependencies
+              working-directory: ChromeExtension/FugleIntegrator-TS
+              run: npm install
+
+            - name: Build extension
+              working-directory: ChromeExtension/FugleIntegrator-TS
+              run: npm run build
+
+            - name: Create zip archive
+              working-directory: ChromeExtension/FugleIntegrator-TS
+              run: |
+                  mkdir -p ../../releases
+                  zip -r ../../releases/FugleIntegrator-${{ github.ref_name }}.zip dist/ manifest.json stock-data.json
+
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: fugle-extension
+                  path: releases/FugleIntegrator-*.zip
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: releases/FugleIntegrator-*.zip
+                  body: |
+                      ## Fugle Integrator Chrome Extension
+
+                      ### Files
+                      - `FugleIntegrator-${{ github.ref_name }}.zip` - Chrome extension package
+
+                      ### Installation
+                      1. Download `FugleIntegrator-${{ github.ref_name }}.zip`
+                      2. Extract the archive
+                      3. Open `chrome://extensions/` in Chrome
+                      4. Enable "Developer mode"
+                      5. Click "Load unpacked" and select the extracted folder
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    build-gemini:
+        runs-on: ubuntu-latest
+        if: startsWith(github.ref, 'refs/tags/gemini-v')
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+
+            - name: Install dependencies
+              working-directory: ChromeExtension/GeminiUrlPrompt-TS
+              run: npm install
+
+            - name: Build extension
+              working-directory: ChromeExtension/GeminiUrlPrompt-TS
+              run: npm run build
+
+            - name: Create zip archive
+              working-directory: ChromeExtension/GeminiUrlPrompt-TS
+              run: |
+                  mkdir -p ../../releases
+                  zip -r ../../releases/GeminiUrlPrompt-${{ github.ref_name }}.zip dist/ manifest.json
+
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: gemini-extension
+                  path: releases/GeminiUrlPrompt-*.zip
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: releases/GeminiUrlPrompt-*.zip
+                  body: |
+                      ## Gemini URL Prompt Chrome Extension
+
+                      ### Files
+                      - `GeminiUrlPrompt-${{ github.ref_name }}.zip` - Chrome extension package
+
+                      ### Installation
+                      1. Download `GeminiUrlPrompt-${{ github.ref_name }}.zip`
+                      2. Extract the archive
+                      3. Open `chrome://extensions/` in Chrome
+                      4. Enable "Developer mode"
+                      5. Click "Load unpacked" and select the extracted folder
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    build-both:
+        runs-on: ubuntu-latest
+        if: startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/fugle-v') && !startsWith(github.ref, 'refs/tags/gemini-v')
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+
+            - name: Build Fugle Integrator
+              working-directory: ChromeExtension/FugleIntegrator-TS
+              run: |
+                  npm install
+                  npm run build
+
+            - name: Build Gemini URL Prompt
+              working-directory: ChromeExtension/GeminiUrlPrompt-TS
+              run: |
+                  npm install
+                  npm run build
+
+            - name: Create zip archives
+              run: |
+                  mkdir -p releases
+                  cd ChromeExtension/FugleIntegrator-TS
+                  zip -r ../../releases/FugleIntegrator-${{ github.ref_name }}.zip dist/ manifest.json stock-data.json
+                  cd ../GeminiUrlPrompt-TS
+                  zip -r ../../releases/GeminiUrlPrompt-${{ github.ref_name }}.zip dist/ manifest.json
+                  cd ../..
+
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: all-extensions
+                  path: releases/
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: releases/*.zip
+                  body: |
+                      ## Fugle Integrator Extensions - ${{ github.ref_name }}
+
+                      ### Included Extensions
+                      - **FugleIntegrator-${{ github.ref_name }}.zip** - Main Fugle Integrator Chrome extension
+                      - **GeminiUrlPrompt-${{ github.ref_name }}.zip** - Gemini URL Prompt Chrome extension
+
+                      ### Installation Instructions
+
+                      #### FugleIntegrator
+                      1. Download `FugleIntegrator-${{ github.ref_name }}.zip`
+                      2. Extract the archive
+                      3. Open `chrome://extensions/` in Chrome
+                      4. Enable "Developer mode"
+                      5. Click "Load unpacked" and select the extracted folder
+
+                      #### GeminiUrlPrompt
+                      1. Download `GeminiUrlPrompt-${{ github.ref_name }}.zip`
+                      2. Extract the archive
+                      3. Open `chrome://extensions/` in Chrome
+                      4. Enable "Developer mode"
+                      5. Click "Load unpacked" and select the extracted folder
+
+                      ### Release Notes
+                      Please refer to the commit messages for detailed changes in this release.
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
