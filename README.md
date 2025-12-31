@@ -90,7 +90,7 @@
 6.  點擊左上角的「載入未封裝項目」。
 7.  選擇解壓縮後的 `FugleIntegrator-TS` 或 `GeminiUrlPrompt-TS` 資料夾即可完成安裝。
 
-💡 **提示**：選擇資料夾時，務必選擇包含 `manifest.json` 的資料夾（例如 `FugleIntegrator-TS`），不要選擇上層資料夾。
+💡 **提示**：選擇資料夾時，務必選擇包含 `dist/` 的資料夾（例如 `FugleIntegrator-TS/dist/`），不要選擇上層資料夾。
 
 ### 方式二：從本機原始碼安裝（開發者用）
 
@@ -113,7 +113,7 @@
 3.  開啟 Chrome 瀏覽器，進入「擴充功能」管理頁面（輸入 `chrome://extensions/`）。
 4.  開啟右上角的「開發人員模式」。
 5.  點擊左上角的「載入未封裝項目」。
-6.  選擇專案中的 `ChromeExtension/FugleIntegrator-TS` 資料夾即可完成安裝。
+6.  選擇專案中的 `ChromeExtension/FugleIntegrator-TS/dist` 資料夾即可完成安裝。
 
 ### 選用功能：Gemini 自動填入提示詞
 
