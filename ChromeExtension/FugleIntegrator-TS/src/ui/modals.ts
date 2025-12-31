@@ -82,7 +82,7 @@ export function createTokenSettingModal(): void {
                 <input type="password" id="token-input" placeholder="輸入你的 finmindtrade API Token..." style="width: 100%; padding: 10px; margin-bottom: 12px; background: #1e1e1e; border: 1px solid #444; border-radius: 4px; color: #fff; box-sizing: border-box;">
                 <div style="display: flex; gap: 8px;">
                     <button id="save-token-btn" style="flex: 1; padding: 8px; background: #6366f1; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">保存 Token</button>
-                    <button id="reset-token-btn" style="flex: 1; padding: 8px; background: #444; color: #aaa; border: none; border-radius: 4px; cursor: pointer;">使用默認</button>
+                    <button id="reset-token-btn" style="flex: 1; padding: 8px; background: #444; color: #aaa; border: none; border-radius: 4px; cursor: pointer;">清空 Token</button>
                     <button id="cancel-token-btn" style="flex: 1; padding: 8px; background: #333; color: #aaa; border: 1px solid #444; border-radius: 4px; cursor: pointer;">取消</button>
                 </div>
                 <div id="token-status" style="margin-top: 12px; padding: 8px; border-radius: 4px; background: rgba(99, 102, 241, 0.1); color: #6366f1; font-size: 12px; display: none;"></div>
@@ -125,16 +125,16 @@ export function createTokenSettingModal(): void {
         setVolumeApiToken(token); // 儲存到 localStorage
         tokenStatus.textContent = "✅ Token 已保存成功";
         tokenStatus.style.display = "block";
-        setTimeout(() => modal.remove(), 1500); // 延遲關閉
+        setTimeout(() => modal.remove(), 1000); // 延遲關閉
     });
 
-    // 重置為預設 Token
+    // 重置為清空 Token
     resetBtn.addEventListener("click", () => {
         localStorage.removeItem(VOLUME_API_TOKEN_KEY);
-        tokenInput.value = DEFAULT_VOLUME_TOKEN;
-        tokenStatus.textContent = "✅ 已重置為默認 Token";
+        tokenInput.value = "";
+        tokenStatus.textContent = "✅ 已清空 Token";
         tokenStatus.style.display = "block";
-        setTimeout(() => modal.remove(), 1500);
+        setTimeout(() => modal.remove(), 1000);
     });
 }
 
