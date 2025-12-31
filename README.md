@@ -57,26 +57,74 @@
 
 ## 🚀 安裝說明
 
-### Chrome 擴充功能
+### 方式一：從 GitHub Releases 下載（推薦）
 
-1.  下載本專案的 `ChromeExtension` 資料夾。
-2.  開啟 Chrome 瀏覽器，進入「擴充功能」管理頁面 (`chrome://extensions/`)。
-3.  開啟右上角的「開發人員模式」。
-4.  點擊左上角的「載入未封裝項目」。
-5.  選擇 `ChromeExtension` 資料夾即可完成安裝。
+此方式無需開發人員模式，最簡單快速。
+
+1.  前往本專案的 [Releases 頁面](https://github.com/Yuno-Liu/Fugle-Integrator-Extension/releases)。
+2.  下載最新版本的 `FugleIntegrator-TS.zip`（主擴充功能）和 `GeminiUrlPrompt-TS.zip`（可選）。
+3.  解壓縮到任意位置。解壓縮後的目錄結構如下：
+
+    ```
+    FugleIntegrator-TS/                    ← 解壓縮後的資料夾
+    ├── manifest.json
+    ├── package.json
+    ├── dist/                              ← 編譯後的資源
+    │   ├── background.js
+    │   ├── content.js
+    │   └── ...
+    └── src/                               ← 原始碼（可選查閱）
+        ├── background.ts
+        ├── content.ts
+        └── ...
+
+    GeminiUrlPrompt-TS/                    ← （若下載）解壓縮後的資料夾
+    ├── manifest.json
+    ├── src/
+    │   └── content.ts
+    └── ...
+    ```
+
+4.  開啟 Chrome 瀏覽器，進入「擴充功能」管理頁面（輸入 `chrome://extensions/`）。
+5.  開啟右上角的「開發人員模式」。
+6.  點擊左上角的「載入未封裝項目」。
+7.  選擇解壓縮後的 `FugleIntegrator-TS` 或 `GeminiUrlPrompt-TS` 資料夾即可完成安裝。
+
+💡 **提示**：選擇資料夾時，務必選擇包含 `manifest.json` 的資料夾（例如 `FugleIntegrator-TS`），不要選擇上層資料夾。
+
+### 方式二：從本機原始碼安裝（開發者用）
+
+如果你想自行編譯或修改源代碼，可以使用此方式。
+
+1.  克隆本專案到本機：
+
+    ```bash
+    git clone https://github.com/Yuno-Liu/Fugle-Integrator-Extension.git
+    cd Fugle-Integrator-Extension/ChromeExtension/FugleIntegrator-TS
+    ```
+
+2.  安裝依賴並編譯：
+
+    ```bash
+    npm install
+    npm run build
+    ```
+
+3.  開啟 Chrome 瀏覽器，進入「擴充功能」管理頁面（輸入 `chrome://extensions/`）。
+4.  開啟右上角的「開發人員模式」。
+5.  點擊左上角的「載入未封裝項目」。
+6.  選擇專案中的 `ChromeExtension/FugleIntegrator-TS` 資料夾即可完成安裝。
 
 ### 選用功能：Gemini 自動填入提示詞
 
 本專案包含一個額外的功能模組，用於配合富果整合器中的「Gemini」按鈕使用。
 當您點擊富果頁面上的「Gemini」按鈕時，會開啟 Gemini 頁面並帶入股票代號與名稱。此功能會自動讀取網址參數並填入對話框送出，省去手動輸入的步驟。
 
-**Chrome 擴充功能安裝步驟：**
+**安裝步驟：**
 
-1.  下載本專案的 `ChromeExtension/GeminiUrlPrompt` 資料夾。
-2.  開啟 Chrome 瀏覽器，進入「擴充功能」管理頁面 (`chrome://extensions/`)。
-3.  開啟右上角的「開發人員模式」。
-4.  點擊左上角的「載入未封裝項目」。
-5.  選擇 `ChromeExtension/GeminiUrlPrompt` 資料夾即可完成安裝。
+使用上述「方式一」或「方式二」，改為選擇 `GeminiUrlPrompt-TS` 資料夾即可。
+
+💡 **提示**：可同時安裝兩個擴充功能（FugleIntegrator-TS 和 GeminiUrlPrompt-TS），它們會互相配合工作。
 
 ## 📖 使用說明
 
