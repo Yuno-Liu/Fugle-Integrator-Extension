@@ -760,7 +760,7 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         // 第一批 API 請求：基本資料與專項數據
         // ========================================
         // 📌 使用 Promise.all 並行請求，大幅減少總等待時間
-        const [industries, concepts, groups, basicData, ratingData, etfHoldingData, capacityData, majorBuySell1Data, majorBuySell5Data, majorBuySell10Data, majorBuySell20Data, tradingVolumeData] = await Promise.all([
+        const [industries, concepts, groups, basicData, ratingData, etfHoldingData, capacityData, majorBuySell1Data, majorBuySell3Data, majorBuySell5Data, majorBuySell10Data, majorBuySell20Data, tradingVolumeData] = await Promise.all([
             fetchV2(API_URLS.industry(stockId)), // 產業分類
             fetchV2(API_URLS.concept(stockId)), // 概念股分類
             fetchV2(API_URLS.group(stockId)), // 集團分類
@@ -769,6 +769,7 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
             fetchETFHolding(API_URLS.etfHolding(stockId)), // ETF 持股
             fetchResult<CapacityItem>(API_URLS.capacity(stockId)), // 產能分析
             fetchMajorBuySell(API_URLS.majorBuySell1(stockId)), // 主力買賣 1 日
+            fetchMajorBuySell(API_URLS.majorBuySell3(stockId)), // 主力買賣 3 日
             fetchMajorBuySell(API_URLS.majorBuySell5(stockId)), // 主力買賣 5 日
             fetchMajorBuySell(API_URLS.majorBuySell10(stockId)), // 主力買賣 10 日
             fetchMajorBuySell(API_URLS.majorBuySell20(stockId)), // 主力買賣 20 日
@@ -883,6 +884,7 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         // 計算主力買賣比率
         // ========================================
         const major1Ratio = calculateMajorRatio(majorBuySell1Data, tradingVolumeData, 1);
+        const major3Ratio = calculateMajorRatio(majorBuySell3Data, tradingVolumeData, 3);
         const major5Ratio = calculateMajorRatio(majorBuySell5Data, tradingVolumeData, 5);
         const major10Ratio = calculateMajorRatio(majorBuySell10Data, tradingVolumeData, 10);
         const major20Ratio = calculateMajorRatio(majorBuySell20Data, tradingVolumeData, 20);
@@ -928,7 +930,7 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         const ratingContent = ratingHtml ? `<div class="info-row"><div class="info-content">${ratingHtml}</div></div>` : null;
 
         // 主力買賣內容
-        const majorContent = createMajorContent(major1Ratio, major5Ratio, major10Ratio, major20Ratio);
+        const majorContent = createMajorContent(major1Ratio, major3Ratio, major5Ratio, major10Ratio, major20Ratio);
 
         // 財務指標內容 (使用 Grid 佈局)
         const financeContent = `

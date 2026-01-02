@@ -371,10 +371,11 @@ export function createRatingHtml(ratingData: RatingItem[], currPrice: number): {
 /**
  * createMajorContent - 生成主力買賣 HTML
  *
- * 將不同區間（1/5/10/20 日）的主力買賣數據轉換為視覺化卡片。
- * 使用四欄網格佈局展示。
+ * 將不同區間（1/3/5/10/20 日）的主力買賣數據轉換為視覺化卡片。
+ * 使用五欄網格佈局展示。
  *
  * @param major1Ratio - 1 日主力買賣比率
+ * @param major3Ratio - 3 日主力買賣比率
  * @param major5Ratio - 5 日主力買賣比率
  * @param major10Ratio - 10 日主力買賣比率
  * @param major20Ratio - 20 日主力買賣比率
@@ -389,11 +390,12 @@ export function createRatingHtml(ratingData: RatingItem[], currPrice: number): {
  *
  * 📌 各區間邊框顏色：
  * - 主1：紅色 #ff4d4f
+ * - 主3：粉色 #e84393
  * - 主5：橙色 #ff9f43
  * - 主10：藍色 #3498db
  * - 主20：紫色 #9b59b6
  */
-export function createMajorContent(major1Ratio: MajorRatioResult | null, major5Ratio: MajorRatioResult | null, major10Ratio: MajorRatioResult | null, major20Ratio: MajorRatioResult | null): string | null {
+export function createMajorContent(major1Ratio: MajorRatioResult | null, major3Ratio: MajorRatioResult | null, major5Ratio: MajorRatioResult | null, major10Ratio: MajorRatioResult | null, major20Ratio: MajorRatioResult | null): string | null {
     /**
      * formatMajorRatio - 格式化主力買賣比率
      * @param ratio - 主力買賣比率結果
@@ -407,18 +409,23 @@ export function createMajorContent(major1Ratio: MajorRatioResult | null, major5R
     };
 
     // 若所有資料皆無效，返回 null
-    if (!major1Ratio && !major5Ratio && !major10Ratio && !major20Ratio) {
+    if (!major1Ratio && !major3Ratio && !major5Ratio && !major10Ratio && !major20Ratio) {
         return null;
     }
 
-    // 生成四欄網格佈局的主力買賣卡片
+    // 生成五欄網格佈局的主力買賣卡片
     return `
-        <div style="font-size: 13px; color: #888; margin-bottom: 8px; font-weight: 600;">最後更新日期：${major1Ratio?.date || major5Ratio?.date || major10Ratio?.date || major20Ratio?.date}</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
+        <div style="font-size: 13px; color: #888; margin-bottom: 8px; font-weight: 600;">最後更新日期：${major1Ratio?.date || major3Ratio?.date || major5Ratio?.date || major10Ratio?.date || major20Ratio?.date}</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px;">
             <div style="background: rgba(255, 77, 79, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #ff4d4f;">
                 <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主1買賣占比</div>
                 <div style="font-size: 16px; font-weight: bold; color: #fff;">${formatMajorRatio(major1Ratio)}</div>
                 ${major1Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major1Ratio.totalBuyStocks / 1000).toFixed(2)} 張｜賣${(major1Ratio.totalSellStocks / 1000).toFixed(2)} 張</div>` : ""}
+            </div>
+            <div style="background: rgba(232, 67, 147, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #e84393;">
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主3買賣占比</div>
+                <div style="font-size: 16px; font-weight: bold; color: #fff;">${formatMajorRatio(major3Ratio)}</div>
+                ${major3Ratio ? `<div style="font-size: 11px; color: #888; margin-top: 4px;">買${(major3Ratio.totalBuyStocks / 1000).toFixed(2)} 張｜賣${(major3Ratio.totalSellStocks / 1000).toFixed(2)} 張</div>` : ""}
             </div>
             <div style="background: rgba(255, 159, 67, 0.08); padding: 8px; border-radius: 4px; border: 1px dashed #ff9f43;">
                 <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">📊 主5買賣占比</div>

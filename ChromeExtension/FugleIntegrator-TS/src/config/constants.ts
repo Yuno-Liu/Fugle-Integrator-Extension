@@ -209,6 +209,9 @@ export const API_URLS: ApiUrls = {
     /** 主力買賣超 1 日數據 */
     majorBuySell1: (id: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/b5/2d/d5/twstockdata.xdjjson?a=${id}&x=stock-chip0002-4&f=1`,
 
+    /** 主力買賣超 3 日數據 */
+    majorBuySell3: (id: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/b5/2d/d5/twstockdata.xdjjson?a=${id}&x=stock-chip0002-4&f=3`,
+
     /** 主力買賣超 5 日數據 */
     majorBuySell5: (id: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/b5/2d/d5/twstockdata.xdjjson?a=${id}&x=stock-chip0002-4&f=5`,
 

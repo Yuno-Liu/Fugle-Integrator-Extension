@@ -416,6 +416,7 @@ export interface ApiUrls {
 
     // 主力買賣 API
     majorBuySell1: (id: string) => string;
+    majorBuySell3: (id: string) => string;
     majorBuySell5: (id: string) => string;
     majorBuySell10: (id: string) => string;
     majorBuySell20: (id: string) => string;
