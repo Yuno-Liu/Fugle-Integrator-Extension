@@ -24,8 +24,7 @@
  * - 背景色: rgba(x, x, x, 0.08) 透明度
  */
 
-import type { RelationItem, ETFHoldingItem, CapacityItem, RatingItem, MajorRatioResult, RelatedStock } from "../types/index";
-import { cleanNum } from "../utils/helpers";
+import type { RelationItem, ETFHoldingItem, CapacityItem, RatingItem, MajorRatioResult, RelatedStock, ResultItem } from "../types/index";
 
 // ============================================================================
 // 🧱 基礎元件
@@ -312,11 +311,11 @@ export function createRatingHtml(ratingData: RatingItem[], currPrice: number): {
     // 篩選近 6 個月的評等資料
     const recentRatings = ratingData.filter((r) => {
         const d = new Date(r.V1);
-        return !isNaN(d.getTime()) && d >= sixMonthsAgo;
+        return !Number.isNaN(d.getTime()) && d >= sixMonthsAgo;
     });
 
     // 提取所有有效的目標價數值
-    const prices = recentRatings.map((r) => parseFloat(String(r.V4).replace(/,/g, ""))).filter((p) => !isNaN(p));
+    const prices = recentRatings.map((r) => Number.parseFloat(String(r.V4).replaceAll(",", ""))).filter((p) => !Number.isNaN(p));
 
     /**
      * getDiff - 計算目標價與現價的差異百分比
@@ -326,8 +325,8 @@ export function createRatingHtml(ratingData: RatingItem[], currPrice: number): {
     const getDiff = (target: number): string => {
         if (!currPrice) return "";
         const diff = (((target - currPrice) / currPrice) * 100).toFixed(1);
-        const color = parseFloat(diff) >= 0 ? "#ff4d4f" : "#52c41a";
-        return `<span style="color: ${color}; font-size: 12px; margin-left: 2px; font-weight: bold;">(${parseFloat(diff) >= 0 ? "+" : ""}${diff}%)</span>`;
+        const color = Number.parseFloat(diff) >= 0 ? "#ff4d4f" : "#52c41a";
+        return `<span style="color: ${color}; font-size: 12px; margin-left: 2px; font-weight: bold;">(${Number.parseFloat(diff) >= 0 ? "+" : ""}${diff}%)</span>`;
     };
 
     // 計算目標價統計值
@@ -366,6 +365,65 @@ export function createRatingHtml(ratingData: RatingItem[], currPrice: number): {
             : null;
 
     return { ratingSummary, ratingHtml };
+}
+
+/**
+ * createContinuousTradingHtml - 生成連續買賣超 HTML
+ *
+ * @param trustBuy - 投信連買資料
+ * @param trustSell - 投信連賣資料
+ * @param foreignBuy - 外資連買資料
+ * @param foreignSell - 外資連賣資料
+ * @returns HTML 字串
+ */
+export function createContinuousTradingHtml(trustBuy: ResultItem | null, trustSell: ResultItem | null, foreignBuy: ResultItem | null, foreignSell: ResultItem | null): string | null {
+    if (!trustBuy && !trustSell && !foreignBuy && !foreignSell) return null;
+
+    const formatItem = (item: ResultItem | null, label: string, color: string) => {
+        if (!item) return "";
+        const buyVol = Number.parseFloat(item.V6 || "0").toLocaleString();
+        const buyAmount = Number.parseFloat(item.V9 || "0").toLocaleString();
+        const days = item.V10 || "0";
+        const prevDays = item.V11 || "0";
+        const isTurn = Number.parseFloat(prevDays) < 0;
+
+        return `
+            <div style="background: rgba(255, 255, 255, 0.03); padding: 8px; border-radius: 4px; border-left: 3px solid ${color}; margin-bottom: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="color: ${color}; font-weight: bold; font-size: 13px;">${label}</span>
+                    <span style="color: #fff; font-weight: bold; font-size: 14px;">${isTurn ? `<span style="color: #f1c40f; font-size: 12px;">(由賣轉買，前連賣 ${Math.abs(Number.parseFloat(prevDays))} 天)</span>` : ""}　連${days}天</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px; color: #aaa;">
+                    <div>張數: <span style="color: #ddd;">${buyVol}</span></div>
+                    <div>金額: <span style="color: #ddd;">${buyAmount}K</span></div>
+                </div>
+            </div>`;
+    };
+
+    const formatSellItem = (item: ResultItem | null, label: string, color: string) => {
+        if (!item) return "";
+        const sellVol = Number.parseFloat(item.V6 || "0").toLocaleString();
+        const sellAmount = Number.parseFloat(item.V9 || "0").toLocaleString();
+        const days = item.V10 || "0";
+        const prevDays = item.V11 || "0";
+        const isTurn = Number.parseFloat(prevDays) < 0;
+
+        return `
+            <div style="background: rgba(255, 255, 255, 0.03); padding: 8px; border-radius: 4px; border-left: 3px solid ${color}; margin-bottom: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="color: ${color}; font-weight: bold; font-size: 13px;">${label}</span>
+                    <span style="color: #fff; font-weight: bold; font-size: 14px;">${isTurn ? `<span style="color: #f1c40f; font-size: 12px;">(由買轉賣，前連買 ${Math.abs(Number.parseFloat(prevDays))} 天)</span>` : ""}　連${days}天</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px; color: #aaa;">
+                    <div>張數: <span style="color: #ddd;">${sellVol}</span></div>
+                    <div>金額: <span style="color: #ddd;">${sellAmount}K</span></div>
+                </div>
+            </div>`;
+    };
+
+    const html = [formatItem(trustBuy, "投信連買", "#ff4d4f"), formatSellItem(trustSell, "投信連賣", "#52c41a"), formatItem(foreignBuy, "外資連買", "#ff4d4f"), formatSellItem(foreignSell, "外資連賣", "#52c41a")].filter(Boolean).join("");
+
+    return html ? `<div style="display: flex; flex-direction: column; gap: 4px;">${html}</div>` : null;
 }
 
 /**

@@ -238,4 +238,20 @@ export const API_URLS: ApiUrls = {
         const startDate = new Date(Date.now() - 80 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
         return `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${id}&start_date=${startDate}&end_date=${endDate}`;
     },
+
+    // ========================================
+    // 🏛️ 連續買賣超 API
+    // ========================================
+
+    /** 投信連買排行 */
+    trustBuyList: (date: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/c8/64/c0/twstockdata.xdjjson?x=rank-chip0017-1&b=B&d=5000&a=B&e=${date}`,
+
+    /** 投信連賣排行 */
+    trustSellList: (date: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/3d/e5/3e/twstockdata.xdjjson?x=rank-chip0017-1&b=S&d=5000&a=B&e=${date}`,
+
+    /** 外資連買排行 */
+    foreignBuyList: (date: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/a8/fa/2b/twstockdata.xdjjson?x=rank-chip0007-1&b=B&d=5000&a=B&e=${date}`,
+
+    /** 外資連賣排行 */
+    foreignSellList: (date: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/aa/45/7f/twstockdata.xdjjson?x=rank-chip0007-1&b=S&d=5000&a=B&e=${date}`,
 };

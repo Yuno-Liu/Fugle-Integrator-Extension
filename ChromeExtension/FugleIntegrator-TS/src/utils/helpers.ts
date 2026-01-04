@@ -102,7 +102,7 @@ export function throttle<T extends (...args: Parameters<T>) => ReturnType<T>>(fn
  */
 export function cleanNum(val: string | number | undefined | null): number {
     if (val === undefined || val === null) return 0;
-    return parseFloat(String(val).replace(/,/g, "")) || 0;
+    return Number.parseFloat(String(val).replaceAll(",", "")) || 0;
 }
 
 /**
@@ -126,6 +126,17 @@ export function formatCurrency(val100M: number): string {
 }
 
 /**
+ * findStockInList - 從清單中找出當前個股的完整資料
+ *
+ * @param list - 資料清單
+ * @param targetSymbol - 目標股票代碼（例如 "AS2330"）
+ * @returns 找到的項目，或 null
+ */
+export function findStockInList(list: ResultItem[], targetSymbol: string): ResultItem | null {
+    return list.find((i) => i.V2 === targetSymbol) || null;
+}
+
+/**
  * findVal - 從全市場清單中找出當前個股的數值
  *
  * 在市場範圍的指標清單中搜尋特定股票的數值。
@@ -141,12 +152,25 @@ export function formatCurrency(val100M: number): string {
  */
 export function findVal(list: ResultItem[], targetSymbol: string): number | null {
     const item = list.find((i) => i.V1 === targetSymbol);
-    return item ? parseFloat(item.V2.replace(/,/g, "")) : null;
+    return item ? Number.parseFloat(item.V2.replaceAll(",", "")) : null;
 }
 
 // ============================================================================
 // 📅 日期處理函式
 // ============================================================================
+
+/**
+ * getFormattedDate - 取得格式化日期 (yyyy/MM/dd)
+ *
+ * @returns 格式化後的日期字串
+ */
+export function getFormattedDate(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}/${month}/${day}`;
+}
 
 /**
  * normalizeDateFormat - 日期格式轉換
@@ -159,7 +183,7 @@ export function findVal(list: ResultItem[], targetSymbol: string): number | null
  */
 export function normalizeDateFormat(dateStr: string | undefined | null): string | null {
     if (!dateStr) return null;
-    return String(dateStr).replace(/\//g, "-");
+    return String(dateStr).replaceAll("/", "-");
 }
 
 /**
@@ -383,12 +407,12 @@ export function fetchTradingVolume(url: string): Promise<TradingVolumeItem[]> {
             const token = getVolumeApiToken();
 
             // 診斷 Token 狀態
-            if (!token) {
+            if (token) {
+                console.log(`✅ 使用成交量 API Token: ${token.substring(0, 10)}...`);
+            } else {
                 console.error("🔴 成交量 API Token 未設置！");
                 console.error("   解決方案: 點擊 🔑 Token 按鈕，在彈出窗口中輸入 finmindtrade API Token");
                 console.error("   免費申請: https://finmindtrade.com/");
-            } else {
-                console.log(`✅ 使用成交量 API Token: ${token.substring(0, 10)}...`);
             }
 
             // 帶有認證標頭的請求
@@ -719,8 +743,8 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
 
     // === 計算買超總量 ===
     selectedBuyList.forEach((item) => {
-        const buy = parseFloat(item.V4) || 0; // 買進股數
-        const sell = parseFloat(item.V5) || 0; // 賣出股數
+        const buy = Number.parseFloat(item.V4) || 0; // 買進股數
+        const sell = Number.parseFloat(item.V5) || 0; // 賣出股數
         totalBuyStocks += buy - sell; // 淨買超
     });
 
@@ -728,8 +752,8 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
     if (sellResultList && sellResultList.length > 0) {
         const selectedSellList = sellResultList;
         selectedSellList.forEach((item) => {
-            const buy = parseFloat(item.V4) || 0;
-            const sell = parseFloat(item.V5) || 0;
+            const buy = Number.parseFloat(item.V4) || 0;
+            const sell = Number.parseFloat(item.V5) || 0;
             totalSellStocks += buy - sell;
         });
     }
@@ -765,7 +789,7 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
     }
 
     // === 計算主力買賣占比 ===
-    const majorRatio = parseFloat((((totalBuyStocks - Math.abs(totalSellStocks)) / totalVolume) * 100).toFixed(2));
+    const majorRatio = Number.parseFloat((((totalBuyStocks - Math.abs(totalSellStocks)) / totalVolume) * 100).toFixed(2));
 
     console.log(`📈 主力買賣占比計算完成: ${majorRatio}% (買超: ${totalBuyStocks}, 賣超: ${totalSellStocks}, 成交量: ${totalVolume})`);
 

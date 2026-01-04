@@ -310,6 +310,7 @@ export type CardPosition = "default" | "left" | "right";
 export interface SectionState {
     basic: boolean; // 基本資料
     major: boolean; // 主力買賣
+    continuous: boolean; // 連續買賣超
     relation: boolean; // 關係企業
     invest: boolean; // 投資佈局
     rating: boolean; // 機構評等
@@ -423,6 +424,12 @@ export interface ApiUrls {
 
     // 成交量 API
     tradingVolume: (id: string) => string;
+
+    // 連續買賣超 API
+    trustBuyList: (date: string) => string;
+    trustSellList: (date: string) => string;
+    foreignBuyList: (date: string) => string;
+    foreignSellList: (date: string) => string;
 }
 
 // ============================================================================
@@ -452,4 +459,12 @@ export interface MarketDataCache {
     allROEs: ResultItem[];
     /** ROA 排行 */
     allROAs: ResultItem[];
+    /** 投信連買排行 */
+    allTrustBuys: ResultItem[];
+    /** 投信連賣排行 */
+    allTrustSells: ResultItem[];
+    /** 外資連買排行 */
+    allForeignBuys: ResultItem[];
+    /** 外資連賣排行 */
+    allForeignSells: ResultItem[];
 }

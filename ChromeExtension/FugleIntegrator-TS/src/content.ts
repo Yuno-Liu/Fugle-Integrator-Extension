@@ -32,12 +32,12 @@
  * - ui/modals.ts: 彈出視窗與搜尋功能
  */
 
-import type { StockBasicInfo, RatingItem, ETFHoldingItem, CapacityItem, TradingVolumeItem, ResultItem, MarketDataCache, CardPosition } from "./types/index";
+import type { StockBasicInfo, RatingItem, CapacityItem, ResultItem, MarketDataCache, CardPosition } from "./types/index";
 import { API_URLS, DEBOUNCE_DELAY, CACHE_TTL } from "./config/constants";
-import { debounce, cleanNum, formatCurrency, findVal, fetchV2, fetchResult, fetchStockRelation, fetchETFHolding, fetchTradingVolume, fetchMajorBuySell, calculateMajorRatio } from "./utils/helpers";
+import { debounce, cleanNum, formatCurrency, findVal, fetchV2, fetchResult, fetchStockRelation, fetchETFHolding, fetchTradingVolume, fetchMajorBuySell, calculateMajorRatio, getFormattedDate, findStockInList } from "./utils/helpers";
 import { loadStockDatabase, getStockCategories, getRelatedStocks } from "./services/database";
 import { injectStyles, injectChainStyles } from "./ui/styles";
-import { createLine, createSection, createLinkList, createRelatedStocksHtml, createETFHoldingHtml, createCapacityHtml, createRatingHtml, createMajorContent } from "./ui/components";
+import { createLine, createSection, createLinkList, createRelatedStocksHtml, createETFHoldingHtml, createCapacityHtml, createRatingHtml, createMajorContent, createContinuousTradingHtml } from "./ui/components";
 import { createTokenSettingModal, handleSearch } from "./ui/modals";
 
 // ============================================================================
@@ -260,72 +260,76 @@ function getVolumeMultiplier(): number {
     const hour = now.getHours();
     const minute = now.getMinutes();
 
-    // 09:00-09:59: 開盤初期，乘數最高
-    if (hour === 9) {
-        if (minute >= 15 && minute < 20) return 8;
-        if (minute >= 20 && minute < 25) return 7.5;
-        if (minute >= 25 && minute < 30) return 7;
-        if (minute >= 30 && minute < 35) return 5;
-        if (minute >= 35 && minute < 40) return 4.75;
-        if (minute >= 40 && minute < 45) return 4.5;
-        if (minute >= 45 && minute < 50) return 4;
-        if (minute >= 50 && minute < 55) return 3.75;
-        if (minute >= 55) return 3.5;
-    }
-    // 10:00-10:59: 盤中早段
-    else if (hour === 10) {
-        if (minute < 5) return 3;
-        if (minute < 10) return 2.9;
-        if (minute < 15) return 2.8;
-        if (minute < 20) return 2.5;
-        if (minute < 25) return 2.4;
-        if (minute < 30) return 2.3;
-        if (minute < 35) return 2.2;
-        if (minute < 40) return 2.1;
-        if (minute < 45) return 2;
-        if (minute < 50) return 1.95;
-        if (minute < 55) return 1.9;
-        return 1.85;
-    }
-    // 11:00-11:59: 盤中午段
-    else if (hour === 11) {
-        if (minute < 5) return 1.8;
-        if (minute < 10) return 1.75;
-        if (minute < 15) return 1.7;
-        if (minute < 20) return 1.68;
-        if (minute < 25) return 1.66;
-        if (minute < 30) return 1.64;
-        if (minute < 35) return 1.6;
-        if (minute < 40) return 1.58;
-        if (minute < 45) return 1.55;
-        if (minute < 50) return 1.52;
-        if (minute < 55) return 1.5;
-        return 1.48;
-    }
-    // 12:00-12:59: 午後交易
-    else if (hour === 12) {
-        if (minute < 5) return 1.45;
-        if (minute < 10) return 1.42;
-        if (minute < 15) return 1.38;
-        if (minute < 20) return 1.36;
-        if (minute < 25) return 1.34;
-        if (minute < 30) return 1.32;
-        if (minute < 35) return 1.3;
-        if (minute < 40) return 1.28;
-        if (minute < 45) return 1.25;
-        if (minute < 50) return 1.23;
-        if (minute < 55) return 1.22;
-        return 1.2;
-    }
-    // 13:00-13:30: 尾盤，接近收盤
-    else if (hour === 13) {
-        if (minute < 5) return 1.18;
-        if (minute < 10) return 1.16;
-        if (minute < 15) return 1.13;
-        if (minute < 20) return 1.12;
-        if (minute < 25) return 1.11;
-        if (minute < 30) return 1.1;
-        return 1; // 收盤後
+    // 定義各時段的乘數對照表
+    const multipliers: Record<number, { threshold: number; value: number }[]> = {
+        9: [
+            { threshold: 15, value: 8 },
+            { threshold: 20, value: 7.5 },
+            { threshold: 25, value: 7 },
+            { threshold: 30, value: 5 },
+            { threshold: 35, value: 4.75 },
+            { threshold: 40, value: 4.5 },
+            { threshold: 45, value: 4 },
+            { threshold: 50, value: 3.75 },
+            { threshold: 60, value: 3.5 },
+        ],
+        10: [
+            { threshold: 5, value: 3 },
+            { threshold: 10, value: 2.9 },
+            { threshold: 15, value: 2.8 },
+            { threshold: 20, value: 2.5 },
+            { threshold: 25, value: 2.4 },
+            { threshold: 30, value: 2.3 },
+            { threshold: 35, value: 2.2 },
+            { threshold: 40, value: 2.1 },
+            { threshold: 45, value: 2 },
+            { threshold: 50, value: 1.95 },
+            { threshold: 55, value: 1.9 },
+            { threshold: 60, value: 1.85 },
+        ],
+        11: [
+            { threshold: 5, value: 1.8 },
+            { threshold: 10, value: 1.75 },
+            { threshold: 15, value: 1.7 },
+            { threshold: 20, value: 1.68 },
+            { threshold: 25, value: 1.66 },
+            { threshold: 30, value: 1.64 },
+            { threshold: 35, value: 1.6 },
+            { threshold: 40, value: 1.58 },
+            { threshold: 45, value: 1.55 },
+            { threshold: 50, value: 1.52 },
+            { threshold: 55, value: 1.5 },
+            { threshold: 60, value: 1.48 },
+        ],
+        12: [
+            { threshold: 5, value: 1.45 },
+            { threshold: 10, value: 1.42 },
+            { threshold: 15, value: 1.38 },
+            { threshold: 20, value: 1.36 },
+            { threshold: 25, value: 1.34 },
+            { threshold: 30, value: 1.32 },
+            { threshold: 35, value: 1.3 },
+            { threshold: 40, value: 1.28 },
+            { threshold: 45, value: 1.25 },
+            { threshold: 50, value: 1.23 },
+            { threshold: 55, value: 1.22 },
+            { threshold: 60, value: 1.2 },
+        ],
+        13: [
+            { threshold: 5, value: 1.18 },
+            { threshold: 10, value: 1.16 },
+            { threshold: 15, value: 1.13 },
+            { threshold: 20, value: 1.12 },
+            { threshold: 25, value: 1.11 },
+            { threshold: 30, value: 1.1 },
+            { threshold: 60, value: 1 },
+        ],
+    };
+
+    const hourData = multipliers[hour];
+    if (hourData) {
+        const match = hourData.find((d) => minute < d.threshold);
+        if (match) return match.value;
     }
 
     // 非交易時間返回 1 (不進行預估)
@@ -381,8 +385,8 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
         if (!volumeEl) return;
 
         // 解析成交量數值 (移除逗號和單位)
-        const currentVolume = parseFloat(volumeEl.textContent?.replace(/,/g, "").replace("張", "").trim() || "0");
-        if (isNaN(currentVolume)) return;
+        const currentVolume = Number.parseFloat(volumeEl.textContent?.replaceAll(",", "").replace("張", "").trim() || "0");
+        if (Number.isNaN(currentVolume)) return;
 
         // 計算預估量 = 當前量 × 乘數
         const multiplier = getVolumeMultiplier();
@@ -460,28 +464,36 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
     const posBtn = document.createElement("button");
 
     /** 根據位置取得按鈕標籤 */
-    const getLabel = (p: CardPosition): string => (p === "right" ? "➡️ 靠右" : p === "left" ? "⬅️ 靠左" : "⬇️ 預設");
+    const getLabel = (p: CardPosition): string => {
+        if (p === "right") return "➡️ 靠右";
+        if (p === "left") return "⬅️ 靠左";
+        return "⬇️ 預設";
+    };
 
     posBtn.textContent = getLabel(currentPos);
     posBtn.className = "custom-analysis-btn";
     posBtn.style.marginLeft = "6px";
     posBtn.title = "切換資訊卡顯示位置";
     posBtn.onclick = () => {
-        const card = document.querySelector("#stock-info-card") as HTMLElement | null;
+        const card = document.querySelector("#stock-info-card");
         const curr = (localStorage.getItem("fugle-info-position") || "right") as CardPosition;
 
         // 循環切換位置: right → left → default → right
-        let next: CardPosition = "right";
-        if (curr === "right") next = "left";
-        else if (curr === "left") next = "default";
-        else next = "right";
+        let next: CardPosition;
+        if (curr === "right") {
+            next = "left";
+        } else if (curr === "left") {
+            next = "default";
+        } else {
+            next = "right";
+        }
 
         // 儲存新位置到 localStorage
         localStorage.setItem("fugle-info-position", next);
         posBtn.textContent = getLabel(next);
 
         // 更新卡片樣式和位置
-        if (card) {
+        if (card instanceof HTMLElement) {
             card.classList.remove("fixed-mode");
             card.style.left = "";
             card.style.right = "";
@@ -515,7 +527,7 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
     popoutBtn.style.marginLeft = "6px";
     popoutBtn.title = "在獨立視窗開啟資訊卡";
     popoutBtn.onclick = () => {
-        const card = document.querySelector("#stock-info-card") as HTMLElement | null;
+        const card = document.querySelector("#stock-info-card");
         if (!card) {
             alert("資訊卡尚未載入");
             return;
@@ -523,7 +535,7 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
 
         // 如果已有彈出視窗，聚焦到該視窗；否則建立新視窗
         if (!popupWindow || popupWindow.closed) {
-            popupWindow = window.open("", "StockInfoCard", "width=600,height=955,scrollbars=yes,resizable=yes");
+            popupWindow = globalThis.open("", "StockInfoCard", "width=600,height=955,scrollbars=yes,resizable=yes");
         } else {
             popupWindow.focus();
         }
@@ -534,7 +546,7 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
         }
 
         // 渲染內容到彈出視窗
-        renderPopupContent(popupWindow, card, stockName || "", stockId);
+        renderPopupContent(popupWindow, card as HTMLElement, stockName || "", stockId);
     };
     btnContainer.appendChild(popoutBtn);
 
@@ -566,13 +578,13 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
 
     // 延遲綁定開關事件 (確保 DOM 已插入)
     setTimeout(() => {
-        const checkbox = toggleWrapper.querySelector("#info-card-toggle") as HTMLInputElement | null;
-        if (checkbox) {
+        const checkbox = toggleWrapper.querySelector("#info-card-toggle");
+        if (checkbox instanceof HTMLInputElement) {
             checkbox.addEventListener("change", (e) => {
                 const checked = (e.target as HTMLInputElement).checked;
                 localStorage.setItem("fugle-info-visible", String(checked));
-                const card = document.querySelector("#stock-info-card") as HTMLElement | null;
-                if (card) card.style.display = checked ? "block" : "none";
+                const card = document.querySelector("#stock-info-card");
+                if (card instanceof HTMLElement) card.style.display = checked ? "block" : "none";
             });
         }
     }, 0);
@@ -613,9 +625,7 @@ function renderPopupContent(w: Window, card: HTMLElement, stockName: string, sto
     const chainStyles = document.querySelector("#chain-link-style")?.textContent || "";
 
     // 寫入彈出視窗的 HTML 結構
-    w.document.open();
-    w.document.write(`
-        <html>
+    w.document.documentElement.innerHTML = `
         <head>
             <title>${stockName} (${stockId}) - 資訊卡</title>
             <style>
@@ -668,9 +678,7 @@ function renderPopupContent(w: Window, card: HTMLElement, stockName: string, sto
                 ${card.innerHTML}
             </div>
         </body>
-        </html>
-    `);
-    w.document.close();
+    `;
 
     // ========================================
     // 綁定區塊折疊事件
@@ -697,20 +705,22 @@ function renderPopupContent(w: Window, card: HTMLElement, stockName: string, sto
     // ========================================
     // 📌 點擊彈出視窗中的股票連結時，導航主頁面並更新資訊
     w.document.addEventListener("click", (e) => {
-        const link = (e.target as HTMLElement).closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link, .concept-link, .industry-link, .group-link") as HTMLAnchorElement | null;
-        if (link?.tagName === "A") {
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        const link = target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link, .concept-link, .industry-link, .group-link");
+        if (link instanceof HTMLAnchorElement) {
             e.preventDefault();
             const href = link.getAttribute("href");
             if (href) {
                 // 在主頁面導航
                 history.pushState({}, "", href);
-                window.dispatchEvent(new PopStateEvent("popstate"));
+                globalThis.dispatchEvent(new PopStateEvent("popstate"));
                 if (location.href !== lastUrl) {
                     lastUrl = location.href;
                     setTimeout(initIntegration, 500);
                 }
                 // 聚焦回主頁面
-                window.focus();
+                globalThis.focus();
             }
         }
     });
@@ -810,14 +820,30 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         // 📌 這些是全市場的財務指標排行，資料量大但更新頻率低
         // 📌 使用 30 分鐘快取避免重複請求
         let allNetValues: ResultItem[], allPBs: ResultItem[], allEPS: ResultItem[], allPEs: ResultItem[], allYields: ResultItem[], allMargins: ResultItem[], allROEs: ResultItem[], allROAs: ResultItem[];
+        let allTrustBuys: ResultItem[], allTrustSells: ResultItem[], allForeignBuys: ResultItem[], allForeignSells: ResultItem[];
 
         const now = Date.now();
+        const today = getFormattedDate();
+
         if (marketDataCache && now - cacheTimestamp < CACHE_TTL) {
             // 使用快取資料
-            ({ allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs } = marketDataCache);
+            ({ allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs, allTrustBuys, allTrustSells, allForeignBuys, allForeignSells } = marketDataCache);
         } else {
             // 快取過期或不存在，重新請求
-            [allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs] = await Promise.all([fetchResult(API_URLS.netValueList), fetchResult(API_URLS.pbRatioList), fetchResult(API_URLS.epsList), fetchResult(API_URLS.peRatioList), fetchResult(API_URLS.yieldList), fetchResult(API_URLS.marginList), fetchResult(API_URLS.roeList), fetchResult(API_URLS.roaList)]);
+            [allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs, allTrustBuys, allTrustSells, allForeignBuys, allForeignSells] = await Promise.all([
+                fetchResult(API_URLS.netValueList),
+                fetchResult(API_URLS.pbRatioList),
+                fetchResult(API_URLS.epsList),
+                fetchResult(API_URLS.peRatioList),
+                fetchResult(API_URLS.yieldList),
+                fetchResult(API_URLS.marginList),
+                fetchResult(API_URLS.roeList),
+                fetchResult(API_URLS.roaList),
+                fetchResult(API_URLS.trustBuyList(today)),
+                fetchResult(API_URLS.trustSellList(today)),
+                fetchResult(API_URLS.foreignBuyList(today)),
+                fetchResult(API_URLS.foreignSellList(today)),
+            ]);
             // 更新快取
             marketDataCache = {
                 allNetValues,
@@ -828,6 +854,10 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
                 allMargins,
                 allROEs,
                 allROAs,
+                allTrustBuys,
+                allTrustSells,
+                allForeignBuys,
+                allForeignSells,
             };
             cacheTimestamp = now;
         }
@@ -854,6 +884,12 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         const margin = findVal(allMargins, targetSymbol); // 毛利率
         const roe = findVal(allROEs, targetSymbol); // 股東權益報酬率 (ROE)
         const roa = findVal(allROAs, targetSymbol); // 資產報酬率 (ROA)
+
+        // 取得連續買賣超資料
+        const trustBuy = findStockInList(allTrustBuys, targetSymbol);
+        const trustSell = findStockInList(allTrustSells, targetSymbol);
+        const foreignBuy = findStockInList(allForeignBuys, targetSymbol);
+        const foreignSell = findStockInList(allForeignSells, targetSymbol);
 
         // 讀取使用者的 UI 狀態偏好
         const isCollapsed = localStorage.getItem("fugle-info-collapsed") === "true";
@@ -896,8 +932,8 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         const marketCap = cleanNum(price) > 0 && cleanNum(info.V3) > 0 ? formatCurrency((cleanNum(price) * cleanNum(info.V3)) / 100000) : "計算中...";
 
         // 股本轉換為億元單位
-        const rawCapital = parseFloat(info.V3.replace(/,/g, ""));
-        const formattedCapital = !isNaN(rawCapital) ? (rawCapital / 10000).toFixed(2) + " 億" : info.V3;
+        const rawCapital = Number.parseFloat(info.V3.replaceAll(",", ""));
+        const formattedCapital = Number.isNaN(rawCapital) ? info.V3 : (rawCapital / 10000).toFixed(2) + " 億";
 
         // ========================================
         // 建立資訊卡容器
@@ -931,6 +967,10 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
 
         // 主力買賣內容
         const majorContent = createMajorContent(major1Ratio, major3Ratio, major5Ratio, major10Ratio, major20Ratio);
+
+        // 連續買賣超內容
+        const continuousTradingHtml = createContinuousTradingHtml(trustBuy, trustSell, foreignBuy, foreignSell);
+        const continuousTradingContent = continuousTradingHtml ? `<div class="info-row"><div class="info-content" style="width: 100%;">${continuousTradingHtml}</div></div>` : null;
 
         // 財務指標內容 (使用 Grid 佈局)
         const financeContent = `
@@ -991,7 +1031,7 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         const relatedContent = [createLine("🔗", "同概念", relatedConceptHtml), createLine("🏭", "同產業", relatedIndustryHtml), createLine("🤝", "同集團", relatedGroupHtml)].filter(Boolean).join("") || null;
 
         // 基本資料區塊
-        const basicContent = [createLine("💵", "營收", info.V5, "#a17de0ff", true), createLine("🏢", "產業", industries.join(" ｜ "), "#76a1fc"), createLine("💡", "概念", concepts.sort().join(" ｜ "), "#67ccac")].filter(Boolean).join("") || null;
+        const basicContent = [createLine("💵", "營收", info.V5, "#a17de0ff", true), createLine("🏢", "產業", industries.join(" ｜ "), "#76a1fc"), createLine("💡", "概念", concepts.toSorted((a: string, b: string) => a.localeCompare(b, "zh-Hant")).join(" ｜ "), "#67ccac")].filter(Boolean).join("") || null;
 
         // 產能分析區塊
         const capacityContent = capacityHtml ? `<div class="info-row"><div class="info-content" style="color: #e67e22; font-weight: 600;">${capacityHtml}</div></div>` : null;
@@ -1010,6 +1050,7 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
             <div id="info-body" style="display: ${isCollapsed ? "none" : "block"};">
                 ${createSection("basic", "基本資料", "📝", basicContent, true)}
                 ${createSection("major", "主力買賣", "💼", majorContent, true)}
+                ${createSection("continuous", "連續買賣超", "🏛️", continuousTradingContent, true)}
                 ${createSection("relation", "關係企業", "🔗", relationContent, true)}
                 ${createSection("invest", "投資佈局", "💼", investContent, false)}
                 ${createSection("rating", "機構評等", "🎯", ratingContent, true)}
@@ -1172,14 +1213,16 @@ const debouncedInit = debounce(initIntegration, DEBOUNCE_DELAY);
  */
 document.addEventListener("click", (e) => {
     // 檢查點擊目標是否為股票連結
-    const link = (e.target as HTMLElement).closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link, .relation-link, .concept-link, .industry-link, .group-link") as HTMLAnchorElement | null;
-    if (link?.tagName === "A") {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const link = target.closest(".sup-link, .cus-link, .riv-link, .all-link, .out-link, .in-link, .etf-link, .relation-link, .concept-link, .industry-link, .group-link");
+    if (link instanceof HTMLAnchorElement) {
         e.preventDefault(); // 阻止預設的頁面跳轉
         const href = link.getAttribute("href");
         if (href) {
             // 使用 History API 進行 SPA 導航
             history.pushState({}, "", href);
-            window.dispatchEvent(new PopStateEvent("popstate"));
+            globalThis.dispatchEvent(new PopStateEvent("popstate"));
             // 如果 URL 變化，觸發重新初始化
             if (location.href !== lastUrl) {
                 lastUrl = location.href;
@@ -1212,7 +1255,7 @@ const startUrlCheck = (): void => {
  * popstate 事件監聽
  * 當使用者點擊瀏覽器的前進/後退按鈕時觸發
  */
-window.addEventListener("popstate", () => {
+globalThis.addEventListener("popstate", () => {
     if (location.href !== lastUrl) {
         lastUrl = location.href;
         lastStockId = null;
