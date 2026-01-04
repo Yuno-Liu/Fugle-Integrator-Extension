@@ -374,10 +374,19 @@ export function createRatingHtml(ratingData: RatingItem[], currPrice: number): {
  * @param trustSell - 投信連賣資料
  * @param foreignBuy - 外資連買資料
  * @param foreignSell - 外資連賣資料
+ * @param trustRatio - 投信持股比
+ * @param foreignRatio - 外資持股比
  * @returns HTML 字串
  */
-export function createContinuousTradingHtml(trustBuy: ResultItem | null, trustSell: ResultItem | null, foreignBuy: ResultItem | null, foreignSell: ResultItem | null): string | null {
-    if (!trustBuy && !trustSell && !foreignBuy && !foreignSell) return null;
+export function createContinuousTradingHtml(
+    trustBuy: ResultItem | null,
+    trustSell: ResultItem | null,
+    foreignBuy: ResultItem | null,
+    foreignSell: ResultItem | null,
+    trustRatio: string | null = null,
+    foreignRatio: string | null = null
+): string | null {
+    if (!trustBuy && !trustSell && !foreignBuy && !foreignSell && !trustRatio && !foreignRatio) return null;
 
     const formatItem = (item: ResultItem | null, label: string, color: string) => {
         if (!item) return "";
@@ -421,9 +430,24 @@ export function createContinuousTradingHtml(trustBuy: ResultItem | null, trustSe
             </div>`;
     };
 
+    const ratioHtml =
+        trustRatio || foreignRatio
+            ? `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+            <div style="background: rgba(52, 152, 219, 0.1); padding: 8px; border-radius: 4px; border: 1px dashed #3498db;">
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 2px;">🏛️ 投信持股比</div>
+                <div style="font-size: 15px; font-weight: bold; color: #fff;">${trustRatio ? trustRatio + "%" : "-"}</div>
+            </div>
+            <div style="background: rgba(155, 89, 182, 0.1); padding: 8px; border-radius: 4px; border: 1px dashed #9b59b6;">
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 2px;">🏛️ 外資持股比</div>
+                <div style="font-size: 15px; font-weight: bold; color: #fff;">${foreignRatio ? foreignRatio + "%" : "-"}</div>
+            </div>
+        </div>`
+            : "";
+
     const html = [formatItem(trustBuy, "投信連買", "#ff4d4f"), formatSellItem(trustSell, "投信連賣", "#52c41a"), formatItem(foreignBuy, "外資連買", "#ff4d4f"), formatSellItem(foreignSell, "外資連賣", "#52c41a")].filter(Boolean).join("");
 
-    return html ? `<div style="display: flex; flex-direction: column; gap: 4px;">${html}</div>` : null;
+    return (ratioHtml || html) ? `<div style="display: flex; flex-direction: column; gap: 4px;">${ratioHtml}${html}</div>` : null;
 }
 
 /**

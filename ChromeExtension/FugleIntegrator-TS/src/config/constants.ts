@@ -254,4 +254,10 @@ export const API_URLS: ApiUrls = {
 
     /** 外資連賣排行 */
     foreignSellList: (date: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/aa/45/7f/twstockdata.xdjjson?x=rank-chip0007-1&b=S&d=5000&a=B&e=${date}`,
+
+    /** 投信持股比排行 */
+    trustShareholdingList: (date: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/57/de/e7/twstockdata.xdjjson?x=rank-chip0021&a=2&b=5000&c=B&d=${date}`,
+
+    /** 外資持股比排行 */
+    foreignShareholdingList: (date: string) => `https://sjis.esunsec.com.tw/b2brwdCommon/jsondata/0a/a9/3c/twstockdata.xdjjson?x=rank-chip0011&a=2&b=5000&c=B&d=${date}`,
 };

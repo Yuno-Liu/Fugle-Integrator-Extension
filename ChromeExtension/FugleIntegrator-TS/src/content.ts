@@ -821,16 +821,17 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         // 📌 使用 30 分鐘快取避免重複請求
         let allNetValues: ResultItem[], allPBs: ResultItem[], allEPS: ResultItem[], allPEs: ResultItem[], allYields: ResultItem[], allMargins: ResultItem[], allROEs: ResultItem[], allROAs: ResultItem[];
         let allTrustBuys: ResultItem[], allTrustSells: ResultItem[], allForeignBuys: ResultItem[], allForeignSells: ResultItem[];
+        let allTrustShareholdings: ResultItem[], allForeignShareholdings: ResultItem[];
 
         const now = Date.now();
         const today = getFormattedDate();
 
         if (marketDataCache && now - cacheTimestamp < CACHE_TTL) {
             // 使用快取資料
-            ({ allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs, allTrustBuys, allTrustSells, allForeignBuys, allForeignSells } = marketDataCache);
+            ({ allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs, allTrustBuys, allTrustSells, allForeignBuys, allForeignSells, allTrustShareholdings, allForeignShareholdings } = marketDataCache);
         } else {
             // 快取過期或不存在，重新請求
-            [allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs, allTrustBuys, allTrustSells, allForeignBuys, allForeignSells] = await Promise.all([
+            [allNetValues, allPBs, allEPS, allPEs, allYields, allMargins, allROEs, allROAs, allTrustBuys, allTrustSells, allForeignBuys, allForeignSells, allTrustShareholdings, allForeignShareholdings] = await Promise.all([
                 fetchResult(API_URLS.netValueList),
                 fetchResult(API_URLS.pbRatioList),
                 fetchResult(API_URLS.epsList),
@@ -843,6 +844,8 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
                 fetchResult(API_URLS.trustSellList(today)),
                 fetchResult(API_URLS.foreignBuyList(today)),
                 fetchResult(API_URLS.foreignSellList(today)),
+                fetchResult(API_URLS.trustShareholdingList(today)),
+                fetchResult(API_URLS.foreignShareholdingList(today)),
             ]);
             // 更新快取
             marketDataCache = {
@@ -858,6 +861,8 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
                 allTrustSells,
                 allForeignBuys,
                 allForeignSells,
+                allTrustShareholdings,
+                allForeignShareholdings,
             };
             cacheTimestamp = now;
         }
@@ -890,6 +895,12 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         const trustSell = findStockInList(allTrustSells, targetSymbol);
         const foreignBuy = findStockInList(allForeignBuys, targetSymbol);
         const foreignSell = findStockInList(allForeignSells, targetSymbol);
+
+        // 取得持股比資料
+        const trustShareholding = findStockInList(allTrustShareholdings, targetSymbol);
+        const foreignShareholding = findStockInList(allForeignShareholdings, targetSymbol);
+        const trustRatio = trustShareholding?.V8 || null;
+        const foreignRatio = foreignShareholding?.V8 || null;
 
         // 讀取使用者的 UI 狀態偏好
         const isCollapsed = localStorage.getItem("fugle-info-collapsed") === "true";
@@ -969,7 +980,8 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
         const majorContent = createMajorContent(major1Ratio, major3Ratio, major5Ratio, major10Ratio, major20Ratio);
 
         // 連續買賣超內容
-        const continuousTradingHtml = createContinuousTradingHtml(trustBuy, trustSell, foreignBuy, foreignSell);
+        const continuousTradingHtml = createContinuousTradingHtml(trustBuy, trustSell, foreignBuy, foreignSell, trustRatio, foreignRatio);
+        const continuousTradingTitle = `連續買賣超 ${trustRatio ? `(投信 ${trustRatio}%)` : ""} ${foreignRatio ? `(外資 ${foreignRatio}%)` : ""}`.trim();
         const continuousTradingContent = continuousTradingHtml ? `<div class="info-row"><div class="info-content" style="width: 100%;">${continuousTradingHtml}</div></div>` : null;
 
         // 財務指標內容 (使用 Grid 佈局)
@@ -1050,7 +1062,7 @@ async function fetchAndRenderInfo(stockId: string, market: string | undefined, p
             <div id="info-body" style="display: ${isCollapsed ? "none" : "block"};">
                 ${createSection("basic", "基本資料", "📝", basicContent, true)}
                 ${createSection("major", "主力買賣", "💼", majorContent, true)}
-                ${createSection("continuous", "連續買賣超", "🏛️", continuousTradingContent, true)}
+                ${createSection("continuous", continuousTradingTitle, "🏛️", continuousTradingContent, true)}
                 ${createSection("relation", "關係企業", "🔗", relationContent, true)}
                 ${createSection("invest", "投資佈局", "💼", investContent, false)}
                 ${createSection("rating", "機構評等", "🎯", ratingContent, true)}

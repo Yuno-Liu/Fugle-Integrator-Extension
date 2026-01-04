@@ -430,6 +430,8 @@ export interface ApiUrls {
     trustSellList: (date: string) => string;
     foreignBuyList: (date: string) => string;
     foreignSellList: (date: string) => string;
+    trustShareholdingList: (date: string) => string;
+    foreignShareholdingList: (date: string) => string;
 }
 
 // ============================================================================
@@ -467,4 +469,8 @@ export interface MarketDataCache {
     allForeignBuys: ResultItem[];
     /** 外資連賣排行 */
     allForeignSells: ResultItem[];
+    /** 投信持股比排行 */
+    allTrustShareholdings: ResultItem[];
+    /** 外資持股比排行 */
+    allForeignShareholdings: ResultItem[];
 }
