@@ -38,7 +38,7 @@
  * - rich-textarea: 富文本輸入框
  * - p: 實際的輸入文字區塊
  */
-export const INPUT_XPATH = `/html/body/chat-app/main/side-navigation-v2/bard-sidenav-container/bard-sidenav-content/div/div/div/bots-chat-window/chat-window/div/input-container/fieldset/input-area-v2/div/div/div[1]/div/div/div/rich-textarea/div[1]/p`;
+export const INPUT_XPATH = `/html/body/chat-app-orchestrator/chat-app/main/side-navigation-v2/bard-sidenav-container/bard-sidenav-content/div/div/div/bots-chat-window/chat-window/div/input-container/fieldset/input-area-v2/div/div/div[1]/div/div/div/rich-textarea/div[1]/p`;
 
 /**
  * SEND_BUTTON_XPATH - Gemini 送出按鈕 XPath
@@ -50,7 +50,7 @@ export const INPUT_XPATH = `/html/body/chat-app/main/side-navigation-v2/bard-sid
  * - 當輸入框為空時，按鈕為 disabled
  * - 填入文字後，按鈕變為 enabled
  */
-export const SEND_BUTTON_XPATH = `/html/body/chat-app/main/side-navigation-v2/bard-sidenav-container/bard-sidenav-content/div/div/div/bots-chat-window/chat-window/div/input-container/fieldset/input-area-v2/div/div/div[3]/div[2]/div[2]/gem-icon-button/button`;
+export const SEND_BUTTON_XPATH = `/html/body/chat-app-orchestrator/chat-app/main/side-navigation-v2/bard-sidenav-container/bard-sidenav-content/div/div/div/bots-chat-window/chat-window/div/input-container/fieldset/input-area-v2/div/div/div[3]/div[2]/div[2]/gem-icon-button/button`;
 
 // ============================================================================
 // ⏱️ 時間相關常量
