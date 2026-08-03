@@ -422,6 +422,7 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
         { name: "🔍 搜尋", val: "search" }, // 內部搜尋功能
         { name: "📈 WantGoo", val: "wantgoo" }, // WantGoo 股票分析
         { name: "💬 CMoney", val: "cmoney" }, // CMoney 討論區
+        { name: "⚔︎ 處置", val: "dispose" }, // 處置神器
         { name: "📊 TV", val: "tvse" }, // TradingView 圖表
         { name: "🏛️ 法人", val: "fubon" }, // 富邦法人進出
         { name: "👤 主力", val: "major" }, // 主力進出明細
@@ -444,6 +445,7 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
             let url = "";
             if (link.val === "wantgoo") url = `https://www.wantgoo.com/stock/${stockId}`;
             if (link.val === "cmoney") url = `https://www.cmoney.tw/forum/stock/${stockId}`;
+            if (link.val === "dispose") url = `https://warrantlb8888.cmoney.tw/DispositionGod/stock/${stockId}`;
             // TradingView 需要區分上市 (TWSE) 和上櫃 (TPEX)
             if (link.val === "tvse") url = `https://tw.tradingview.com/chart/GTx3hMzq/?symbol=${market === "上市" ? "TWSE" : "TPEX"}:${stockId}`;
             if (link.val === "fubon") url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcl/zcl.djhtm?a=${stockId}&b=3`;
