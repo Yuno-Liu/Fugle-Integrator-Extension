@@ -1,0 +1,30 @@
+{
+    "name": "localstorage-reader-ts",
+    "version": "1.0.0",
+    "description": "LocalStorage Key 讀取器 - TypeScript 版本",
+    "scripts": {
+        "build": "npm run build:content && npm run build:popup && npm run copy:assets",
+        "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020",
+        "build:popup": "esbuild src/popup.ts --bundle --outfile=dist/popup.js --format=iife --target=es2020",
+        "copy:assets": "node -e \"const fs=require('fs'); fs.copyFileSync('manifest.json', 'dist/manifest.json'); fs.copyFileSync('popup.html', 'dist/popup.html');\"",
+        "watch": "npm run build && concurrently \"npm run watch:content\" \"npm run watch:popup\"",
+        "watch:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 --watch",
+        "watch:popup": "esbuild src/popup.ts --bundle --outfile=dist/popup.js --format=iife --target=es2020 --watch",
+        "clean": "rimraf dist/*.js dist/*.js.map dist/*.html dist/*.json",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/chrome": "^0.0.287",
+        "concurrently": "^9.1.2",
+        "esbuild": "^0.27.4",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.7.2"
+    },
+    "keywords": [
+        "chrome-extension",
+        "localstorage",
+        "typescript"
+    ],
+    "author": "",
+    "license": "MIT"
+}

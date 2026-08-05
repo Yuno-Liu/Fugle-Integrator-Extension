@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8" />
+        <style>
+            body {
+                width: 320px;
+                padding: 12px;
+                font-family: Arial, sans-serif;
+                margin: 0;
+            }
+            .form-group {
+                margin-bottom: 10px;
+            }
+            label {
+                display: block;
+                font-weight: bold;
+                margin-bottom: 4px;
+                font-size: 13px;
+            }
+            input {
+                width: 100%;
+                padding: 6px;
+                box-sizing: border-box;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            .btn {
+                width: 100%;
+                padding: 8px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background-color 0.2s;
+            }
+            .btn-primary {
+                background-color: #4caf50;
+                color: white;
+            }
+            .btn-primary:hover {
+                background-color: #45a049;
+            }
+            .btn-secondary {
+                background-color: #008cba;
+                color: white;
+                margin-top: 8px;
+            }
+            .btn-secondary:hover {
+                background-color: #007399;
+            }
+            .result-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 12px;
+            }
+            .result-box {
+                margin-top: 6px;
+                padding: 8px;
+                background: #f4f4f4;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                word-break: break-all;
+                max-height: 150px;
+                overflow-y: auto;
+                font-size: 12px;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h3>📌 LocalStorage 讀取器</h3>
+
+        <div class="form-group">
+            <label for="keyInput">🔍 請輸入 Key：</label>
+            <input type="text" id="keyInput" placeholder="例如：token 或 userId" />
+        </div>
+
+        <button id="getValueBtn" class="btn btn-primary">🚀 取得 Value</button>
+
+        <div class="result-header">
+            <label style="font-weight: bold; font-size: 13px">📄 查詢結果：</label>
+        </div>
+
+        <div id="result" class="result-box">尚未讀取</div>
+
+        <!-- 💡 新增：複製按鈕（預設不顯示） -->
+        <button id="copyBtn" class="btn btn-secondary" style="display: none">📋 複製內容</button>
+
+        <script src="popup.js"></script>
+    </body>
+</html>
