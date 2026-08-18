@@ -33,7 +33,7 @@
  */
 
 import type { StockBasicInfo, RatingItem, CapacityItem, ResultItem, MarketDataCache, CardPosition } from "./types/index";
-import { API_URLS, DEBOUNCE_DELAY, CACHE_TTL } from "./config/constants";
+import { API_URLS, DEBOUNCE_DELAY, CACHE_TTL, FOCUS_INPUT_SHORTCUT_KEY, DEFAULT_FOCUS_INPUT_SHORTCUT } from "./config/constants";
 import { debounce, cleanNum, formatCurrency, findVal, fetchV2, fetchResult, fetchStockRelation, fetchETFHolding, fetchTradingVolume, fetchMajorBuySell, calculateMajorRatio, getFormattedDate, findStockInList } from "./utils/helpers";
 import { loadStockDatabase, getStockCategories, getRelatedStocks } from "./services/database";
 import { injectStyles, injectChainStyles } from "./ui/styles";
@@ -72,6 +72,62 @@ let cacheTimestamp: number = 0;
 
 /** 日期時間顯示是否已初始化的標誌 */
 let isDateTimeInitialized: boolean = false;
+
+/** 快速定位輸入框目前使用的快捷鍵 */
+let focusInputShortcut: string = DEFAULT_FOCUS_INPUT_SHORTCUT;
+
+// ============================================================================
+// ⌨️ 快速定位輸入框快捷鍵
+// ============================================================================
+
+/**
+ * 將 KeyboardEvent 轉換為標準化快捷鍵字串（例如 Alt+Q）
+ */
+function formatShortcut(event: KeyboardEvent): string | null {
+    if (event.repeat) return null;
+    const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+    const ignoredKeys = new Set(["Alt", "Control", "Shift", "Meta"]);
+    if (ignoredKeys.has(key)) return null;
+
+    const parts: string[] = [];
+    if (event.ctrlKey) parts.push("Ctrl");
+    if (event.altKey) parts.push("Alt");
+    if (event.shiftKey) parts.push("Shift");
+    if (event.metaKey) parts.push("Meta");
+    if (parts.length === 0) return null;
+
+    parts.push(key);
+    return parts.join("+");
+}
+
+/**
+ * 聚焦並定位到目標輸入框（HTML id = ember14）
+ */
+function focusEmber14Input(): void {
+    const target = document.getElementById("ember14");
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+        console.warn("Target input #ember14 not found.");
+        return;
+    }
+
+    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    target.focus();
+    target.select();
+}
+
+/**
+ * 從 chrome.storage.sync 載入快捷鍵設定
+ */
+async function loadFocusInputShortcut(): Promise<void> {
+    try {
+        const result = await chrome.storage.sync.get(FOCUS_INPUT_SHORTCUT_KEY);
+        const value = result[FOCUS_INPUT_SHORTCUT_KEY];
+        focusInputShortcut = typeof value === "string" && value.trim() ? value : DEFAULT_FOCUS_INPUT_SHORTCUT;
+    } catch (error) {
+        console.warn("Failed to load shortcut settings:", error);
+        focusInputShortcut = DEFAULT_FOCUS_INPUT_SHORTCUT;
+    }
+}
 
 // ============================================================================
 // 🔧 狀態設定器 - 封裝狀態更新邏輯
@@ -1248,6 +1304,26 @@ document.addEventListener("click", (e) => {
 });
 
 /**
+ * 鍵盤快捷鍵監聽
+ * 預設 Alt+Q，可於擴充功能設定頁自訂
+ */
+document.addEventListener("keydown", (event: KeyboardEvent) => {
+    const shortcut = formatShortcut(event);
+    if (!shortcut || shortcut !== focusInputShortcut) return;
+    event.preventDefault();
+    focusEmber14Input();
+});
+
+/**
+ * 監聽快捷鍵設定變更（options page 更新後即時生效）
+ */
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "sync" || !(FOCUS_INPUT_SHORTCUT_KEY in changes)) return;
+    const newValue = changes[FOCUS_INPUT_SHORTCUT_KEY]?.newValue;
+    focusInputShortcut = typeof newValue === "string" && newValue.trim() ? newValue : DEFAULT_FOCUS_INPUT_SHORTCUT;
+});
+
+/**
  * URL 輪詢機制
  * 每秒檢查 URL 是否變化，用於偵測某些情況下的 SPA 導航
  */
@@ -1307,4 +1383,5 @@ document.addEventListener("visibilitychange", () => {
 // 📌 延遲是為了確保富果頁面的 Angular 渲染完成
 
 startUrlCheck();
+void loadFocusInputShortcut();
 setTimeout(initIntegration, 800);

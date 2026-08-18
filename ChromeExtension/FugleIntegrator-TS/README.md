@@ -61,6 +61,12 @@ npm run typecheck
 4. 點擊「載入未封裝項目」，選擇 `dist/` 目錄
 5. 前往 https://www.fugle.tw/ai/2330 測試擴充功能
 
+## 快速定位快捷鍵（新增）
+
+-   預設快捷鍵：`Alt + Q`
+-   功能：快速定位並聚焦到頁面中 `id="ember14"` 的輸入框
+-   自訂方式：到擴充功能「選項」頁面設定自訂快捷鍵（可儲存到 `chrome.storage.sync`）
+
 ## 類型定義
 
 所有 API 回應和資料結構都有明確的 TypeScript 類型定義，位於 `src/types/index.ts`：

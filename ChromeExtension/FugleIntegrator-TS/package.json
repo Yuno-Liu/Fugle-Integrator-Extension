@@ -3,13 +3,15 @@
     "version": "1.0.0",
     "description": "富果整合器 - TypeScript 版本",
     "scripts": {
-        "build": "npm run build:background && npm run build:content && npm run copy:assets",
+        "build": "npm run build:background && npm run build:content && npm run build:options && npm run copy:assets",
         "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020",
         "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020",
-        "copy:assets": "node -e \"const fs=require('fs'); fs.copyFileSync('manifest.json', 'dist/manifest.json'); fs.copyFileSync('stock-data.json', 'dist/stock-data.json');\"",
-        "watch": "npm run build && concurrently \"npm run watch:background\" \"npm run watch:content\"",
+        "build:options": "esbuild src/options.ts --bundle --outfile=dist/options.js --format=iife --target=es2020",
+        "copy:assets": "node -e \"const fs=require('fs'); fs.copyFileSync('manifest.json', 'dist/manifest.json'); fs.copyFileSync('stock-data.json', 'dist/stock-data.json'); fs.copyFileSync('options.html', 'dist/options.html');\"",
+        "watch": "npm run build && concurrently \"npm run watch:background\" \"npm run watch:content\" \"npm run watch:options\"",
         "watch:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020 --watch",
         "watch:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 --watch",
+        "watch:options": "esbuild src/options.ts --bundle --outfile=dist/options.js --format=iife --target=es2020 --watch",
         "clean": "rimraf dist/*.js dist/*.js.map",
         "typecheck": "tsc --noEmit"
     },

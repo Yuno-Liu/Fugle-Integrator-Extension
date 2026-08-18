@@ -56,6 +56,16 @@ export const VOLUME_API_TOKEN_KEY = "fugle-volume-api-token";
  */
 export const DEFAULT_VOLUME_TOKEN = "";
 
+/**
+ * 快速定位輸入框快捷鍵的 storage key
+ */
+export const FOCUS_INPUT_SHORTCUT_KEY = "fugle-focus-input-shortcut";
+
+/**
+ * 快速定位輸入框預設快捷鍵
+ */
+export const DEFAULT_FOCUS_INPUT_SHORTCUT = "Alt+Q";
+
 // ============================================================================
 // 🌐 API 配置
 // ============================================================================
