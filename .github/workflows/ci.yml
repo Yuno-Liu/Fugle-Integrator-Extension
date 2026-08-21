@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.extension.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        extension:
+          - name: FugleIntegrator
+            path: ChromeExtension/FugleIntegrator-TS
+            has_test: false
+          - name: GeminiUrlPrompt
+            path: ChromeExtension/GeminiUrlPrompt-TS
+            has_test: false
+          - name: LocalStorageReader
+            path: ChromeExtension/Localstorage-reader-TS
+            has_test: false
+          - name: TDCCHoldingRatio
+            path: ChromeExtension/TDCC-HoldingRatio-TS
+            has_test: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.extension.path }}
+        run: npm ci || npm install
+
+      - name: Typecheck
+        working-directory: ${{ matrix.extension.path }}
+        run: npm run typecheck
+
+      - name: Run Tests
+        if: matrix.extension.has_test == true
+        working-directory: ${{ matrix.extension.path }}
+        run: npm run test
+
+      - name: Build Extension
+        working-directory: ${{ matrix.extension.path }}
+        run: npm run build
