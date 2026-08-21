@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "TDCC 持股比例統計工具",
+    "version": "1.0.0",
+    "description": "TDCC 集保持股比例統計，支援散戶/大戶級距、百分比進度條與自動更新",
+    "permissions": [],
+    "host_permissions": ["https://www.tdcc.com.tw/*"],
+    "content_scripts": [
+        {
+            "matches": ["https://www.tdcc.com.tw/portal/zh/smWeb/qryStock*"],
+            "js": ["content.js"],
+            "run_at": "document_idle"
+        }
+    ]
+}
