@@ -483,6 +483,7 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
         { name: "🏛️ 法人", val: "fubon" }, // 富邦法人進出
         { name: "👤 主力", val: "major" }, // 主力進出明細
         { name: "🤖 Gemini", val: "Gemini" }, // Google Gemini AI 分析
+        { name: "🤖 ChatGPT", val: "chatgpt" }, // ChatGPT AI 分析
     ];
 
     // 為每個連結建立按鈕
@@ -508,7 +509,8 @@ function insertButtonMenu(container: Element | null, stockId: string, market: st
             if (link.val === "major") url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco_${stockId}.djhtm`;
             // Gemini 帶入股票代碼和名稱作為提示詞
             if (link.val === "Gemini") url = `https://gemini.google.com/gem/1QUXOXLuTZt54GwWAClfuBcs7Q4LlFRsc?usp=sharing&p=${stockId}%20${stockName}`;
-
+            // ChatGPT 帶入股票代碼和名稱作為提示詞
+            if (link.val === "chatgpt") url = `https://chatgpt.com/g/g-p-6a7bd905e76c8191845afc2c828aec0f/project?prompt=${stockId}%20${stockName}`;
             // 開啟新分頁
             if (url) window.open(url, "_blank");
         };
