@@ -31,6 +31,9 @@ jobs:
           - name: TDCCHoldingRatio
             path: ChromeExtension/TDCC-HoldingRatio-TS
             has_test: true
+          - name: AutoRefresh
+            path: ChromeExtension/AutoRefresh-TS
+            has_test: false
 
     steps:
       - name: Checkout repository

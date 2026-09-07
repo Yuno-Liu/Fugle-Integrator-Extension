@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>網頁自動刷新器</title>
+        <style>
+            :root {
+                --primary: #10b981;
+                --primary-hover: #059669;
+                --primary-light: #ecfdf5;
+                --danger: #ef4444;
+                --danger-hover: #dc2626;
+                --danger-light: #fef2f2;
+                --bg: #ffffff;
+                --card-bg: #f8fafc;
+                --text-main: #0f172a;
+                --text-sub: #64748b;
+                --border: #e2e8f0;
+                --radius: 12px;
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                width: 330px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                background-color: var(--bg);
+                color: var(--text-main);
+                font-size: 13px;
+                line-height: 1.5;
+                padding: 14px;
+            }
+
+            /* 頂部標題與狀態 */
+            .header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 12px;
+            }
+
+            .logo-title {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 15px;
+                font-weight: 700;
+                color: var(--text-main);
+            }
+
+            .logo-icon {
+                font-size: 18px;
+            }
+
+            .status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 3px 8px;
+                border-radius: 9999px;
+                font-size: 11px;
+                font-weight: 600;
+                background: #f1f5f9;
+                color: #64748b;
+                transition: all 0.2s ease;
+            }
+
+            .status-badge.active {
+                background: var(--primary-light);
+                color: #047857;
+            }
+
+            .status-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #94a3b8;
+            }
+
+            .status-badge.active .status-dot {
+                background: var(--primary);
+                box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+                animation: pulse 1.5s infinite;
+            }
+
+            @keyframes pulse {
+                0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+                70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+                100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            }
+
+            /* 當前頁面資訊 */
+            .tab-info {
+                background: var(--card-bg);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 8px 10px;
+                margin-bottom: 12px;
+                font-size: 11px;
+                color: var(--text-sub);
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            .tab-title {
+                font-weight: 600;
+                color: var(--text-main);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .tab-url {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                opacity: 0.8;
+            }
+
+            /* 倒數計時主看板 */
+            .timer-card {
+                background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 14px;
+                text-align: center;
+                margin-bottom: 14px;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .timer-digits {
+                font-size: 34px;
+                font-weight: 800;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                color: var(--text-main);
+                letter-spacing: -0.5px;
+                margin-bottom: 4px;
+            }
+
+            .timer-card.active .timer-digits {
+                color: #059669;
+            }
+
+            .timer-subtext {
+                font-size: 12px;
+                color: var(--text-sub);
+                display: flex;
+                justify-content: center;
+                gap: 12px;
+            }
+
+            .progress-bar-container {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 4px;
+                background: #e2e8f0;
+            }
+
+            .progress-bar {
+                height: 100%;
+                width: 100%;
+                background: var(--primary);
+                transition: width 0.3s ease;
+            }
+
+            /* 自訂秒數輸入區 */
+            .section-label {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text-main);
+                margin-bottom: 6px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .input-group {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 10px;
+            }
+
+            .step-btn {
+                background: #f1f5f9;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                width: 32px;
+                height: 34px;
+                font-size: 14px;
+                font-weight: bold;
+                color: var(--text-main);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.15s;
+            }
+
+            .step-btn:hover {
+                background: #e2e8f0;
+            }
+
+            .interval-input {
+                flex: 1;
+                height: 34px;
+                text-align: center;
+                font-size: 15px;
+                font-weight: 700;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                color: var(--text-main);
+                outline: none;
+                transition: border-color 0.2s;
+            }
+
+            .interval-input:focus {
+                border-color: var(--primary);
+            }
+
+            .unit-label {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text-sub);
+            }
+
+            /* 快速預設膠囊 */
+            .preset-chips {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 4px;
+                margin-bottom: 14px;
+            }
+
+            .preset-chip {
+                padding: 5px 0;
+                background: #f8fafc;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--text-sub);
+                cursor: pointer;
+                text-align: center;
+                transition: all 0.15s ease;
+            }
+
+            .preset-chip:hover {
+                background: #f1f5f9;
+                color: var(--text-main);
+                border-color: #cbd5e1;
+            }
+
+            .preset-chip.selected {
+                background: var(--primary-light);
+                color: #047857;
+                border-color: #10b981;
+            }
+
+            /* 主要操作按鈕 */
+            .action-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 10px;
+                border-radius: 8px;
+                border: none;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            .btn:active {
+                transform: scale(0.98);
+            }
+
+            .btn-start {
+                background-color: var(--primary);
+                color: white;
+                box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+            }
+
+            .btn-start:hover {
+                background-color: var(--primary-hover);
+            }
+
+            .btn-stop {
+                background-color: var(--danger);
+                color: white;
+                box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+            }
+
+            .btn-stop:hover {
+                background-color: var(--danger-hover);
+            }
+
+            .btn-secondary {
+                background-color: #f1f5f9;
+                color: var(--text-main);
+                border: 1px solid var(--border);
+            }
+
+            .btn-secondary:hover {
+                background-color: #e2e8f0;
+            }
+
+            /* 進階選項（可折疊） */
+            .advanced-details {
+                border-top: 1px solid var(--border);
+                padding-top: 10px;
+            }
+
+            .advanced-summary {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text-sub);
+                cursor: pointer;
+                user-select: none;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                list-style: none;
+            }
+
+            .advanced-summary::-webkit-details-marker {
+                display: none;
+            }
+
+            .advanced-content {
+                padding-top: 10px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .option-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 12px;
+                color: var(--text-main);
+            }
+
+            .option-label {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                cursor: pointer;
+            }
+
+            .jitter-input {
+                width: 48px;
+                padding: 3px 6px;
+                font-size: 12px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                text-align: center;
+            }
+
+            /* 開關外觀 */
+            .switch {
+                position: relative;
+                display: inline-block;
+                width: 32px;
+                height: 18px;
+            }
+
+            .switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+            .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background-color: #cbd5e1;
+                transition: .2s;
+                border-radius: 18px;
+            }
+
+            .slider:before {
+                position: absolute;
+                content: "";
+                height: 14px;
+                width: 14px;
+                left: 2px;
+                bottom: 2px;
+                background-color: white;
+                transition: .2s;
+                border-radius: 50%;
+            }
+
+            input:checked + .slider {
+                background-color: var(--primary);
+            }
+
+            input:checked + .slider:before {
+                transform: translateX(14px);
+            }
+
+            /* 頁尾提示 */
+            .footer {
+                margin-top: 12px;
+                text-align: center;
+                font-size: 11px;
+                color: #94a3b8;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- 頂部標題與狀態 -->
+        <div class="header">
+            <div class="logo-title">
+                <span class="logo-icon">🔄</span>
+                <span>自動刷新器</span>
+            </div>
+            <div id="statusBadge" class="status-badge">
+                <span class="status-dot"></span>
+                <span id="statusText">已暫停</span>
+            </div>
+        </div>
+
+        <!-- 當前分頁資訊 -->
+        <div class="tab-info" id="tabInfoContainer">
+            <div class="tab-title" id="tabTitle">正在載入分頁資訊...</div>
+            <div class="tab-url" id="tabUrl">--</div>
+        </div>
+
+        <!-- 倒數計時主看板 -->
+        <div class="timer-card" id="timerCard">
+            <div class="timer-digits" id="timerDigits">--:--</div>
+            <div class="timer-subtext">
+                <span id="statCount">累計次數: 0</span>
+                <span id="statLastTime">上次刷新: --</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <!-- 秒數設定區 -->
+        <div class="section-label">
+            <span>⏱️ 刷新間隔（秒）</span>
+        </div>
+
+        <div class="input-group">
+            <button class="step-btn" id="stepMinus5" title="減少 5 秒">-5</button>
+            <button class="step-btn" id="stepMinus1" title="減少 1 秒">-1</button>
+            <input type="number" id="intervalInput" class="interval-input" min="1" max="86400" value="10" />
+            <span class="unit-label">秒</span>
+            <button class="step-btn" id="stepPlus1" title="增加 1 秒">+1</button>
+            <button class="step-btn" id="stepPlus5" title="增加 5 秒">+5</button>
+        </div>
+
+        <!-- 快速預設膠囊 -->
+        <div class="preset-chips">
+            <button class="preset-chip" data-sec="5">5s</button>
+            <button class="preset-chip selected" data-sec="10">10s</button>
+            <button class="preset-chip" data-sec="30">30s</button>
+            <button class="preset-chip" data-sec="60">1m</button>
+            <button class="preset-chip" data-sec="300">5m</button>
+            <button class="preset-chip" data-sec="600">10m</button>
+        </div>
+
+        <!-- 操作按鈕 -->
+        <div class="action-buttons">
+            <button id="toggleBtn" class="btn btn-start">
+                <span>▶ 開始自動刷新</span>
+            </button>
+            <button id="reloadNowBtn" class="btn btn-secondary">
+                <span>🔄 立即重新整理</span>
+            </button>
+        </div>
+
+        <!-- 進階設定 -->
+        <details class="advanced-details">
+            <summary class="advanced-summary">
+                <span>⚙️ 進階選項</span>
+                <span>▾</span>
+            </summary>
+            <div class="advanced-content">
+                <div class="option-row">
+                    <label class="option-label" for="toggleFloatingBadge">
+                        <span>在網頁顯示懸浮計時小工具</span>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleFloatingBadge" checked />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="option-row">
+                    <label class="option-label" for="toggleHardReload">
+                        <span>強制重新整理（略過快取）</span>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleHardReload" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="option-row">
+                    <label class="option-label" for="jitterInput">
+                        <span>隨機浮動秒數 (±秒)</span>
+                    </label>
+                    <div>
+                        <input type="number" id="jitterInput" class="jitter-input" min="0" max="60" value="0" />
+                        <span style="font-size: 11px; color: var(--text-sub);">秒</span>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <div class="footer">
+            提示：每個分頁皆可獨立設定刷新頻率
+        </div>
+
+        <script src="popup.js"></script>
+    </body>
+</html>

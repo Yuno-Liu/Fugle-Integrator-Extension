@@ -8,6 +8,7 @@ on:
       - "gemini-v*"
       - "localstorage-v*"
       - "tdcc-v*"
+      - "autorefresh-v*"
   workflow_dispatch:
     inputs:
       target:
@@ -21,6 +22,7 @@ on:
           - "gemini"
           - "localstorage"
           - "tdcc"
+          - "autorefresh"
       tag_name:
         description: "Release tag name (optional when manual run)"
         required: false
@@ -62,12 +64,14 @@ jobs:
           BUILD_GEMINI=false
           BUILD_LOCALSTORAGE=false
           BUILD_TDCC=false
+          BUILD_AUTOREFRESH=false
 
-          if [ "$INPUT_TARGET" = "all" ] || [[ "$REF" == v* && "$REF" != fugle-v* && "$REF" != gemini-v* && "$REF" != localstorage-v* && "$REF" != tdcc-v* ]]; then
+          if [ "$INPUT_TARGET" = "all" ] || [[ "$REF" == v* && "$REF" != fugle-v* && "$REF" != gemini-v* && "$REF" != localstorage-v* && "$REF" != tdcc-v* && "$REF" != autorefresh-v* ]]; then
             BUILD_FUGLE=true
             BUILD_GEMINI=true
             BUILD_LOCALSTORAGE=true
             BUILD_TDCC=true
+            BUILD_AUTOREFRESH=true
             echo "release_type=all" >> "$GITHUB_OUTPUT"
           elif [ "$INPUT_TARGET" = "fugle" ] || [[ "$REF" == fugle-v* ]]; then
             BUILD_FUGLE=true
@@ -81,11 +85,15 @@ jobs:
           elif [ "$INPUT_TARGET" = "tdcc" ] || [[ "$REF" == tdcc-v* ]]; then
             BUILD_TDCC=true
             echo "release_type=tdcc" >> "$GITHUB_OUTPUT"
+          elif [ "$INPUT_TARGET" = "autorefresh" ] || [[ "$REF" == autorefresh-v* ]]; then
+            BUILD_AUTOREFRESH=true
+            echo "release_type=autorefresh" >> "$GITHUB_OUTPUT"
           else
             BUILD_FUGLE=true
             BUILD_GEMINI=true
             BUILD_LOCALSTORAGE=true
             BUILD_TDCC=true
+            BUILD_AUTOREFRESH=true
             echo "release_type=all" >> "$GITHUB_OUTPUT"
           fi
 
@@ -93,6 +101,7 @@ jobs:
           echo "build_gemini=$BUILD_GEMINI" >> "$GITHUB_OUTPUT"
           echo "build_localstorage=$BUILD_LOCALSTORAGE" >> "$GITHUB_OUTPUT"
           echo "build_tdcc=$BUILD_TDCC" >> "$GITHUB_OUTPUT"
+          echo "build_autorefresh=$BUILD_AUTOREFRESH" >> "$GITHUB_OUTPUT"
 
       - name: Prepare Releases Directory
         run: mkdir -p releases
@@ -138,6 +147,16 @@ jobs:
           zip -r ../../releases/TDCC-HoldingRatio-${{ steps.config.outputs.release_tag }}.zip dist/ manifest.json README.md
           cd ../..
 
+      - name: Build Auto Refresh
+        if: steps.config.outputs.build_autorefresh == 'true'
+        run: |
+          cd ChromeExtension/AutoRefresh-TS
+          npm ci || npm install
+          npm run typecheck
+          npm run build
+          zip -r ../../releases/AutoRefresh-${{ steps.config.outputs.release_tag }}.zip dist/ manifest.json popup.html README.md
+          cd ../..
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -177,6 +196,12 @@ jobs:
           if [ "${{ steps.config.outputs.build_tdcc }}" = "true" ]; then
             cat << EOF >> release_body.md
           - **TDCC-HoldingRatio-$TAG.zip** - 集保股權分散比例統計工具
+          EOF
+          fi
+
+          if [ "${{ steps.config.outputs.build_autorefresh }}" = "true" ]; then
+            cat << EOF >> release_body.md
+          - **AutoRefresh-$TAG.zip** - 網頁自動刷新器 (自訂秒數、懸浮小工具、略過快取、隨機浮動)
           EOF
           fi
 
