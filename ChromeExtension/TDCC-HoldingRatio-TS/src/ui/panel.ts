@@ -3,7 +3,7 @@ import type { PanelElements } from "../types/index.js";
 
 /**
  * 從指定容器中查找指定 CSS 選擇器的元素，若未找到則拋出錯誤
- * 
+ *
  * @param panel - 容器元素
  * @param selector - CSS 選擇器字串
  * @returns 匹配的 DOM 元素
@@ -22,7 +22,7 @@ function requireElement<T extends Element>(panel: HTMLElement, selector: string)
 /**
  * 建立統計面板的完整 DOM 節點結構
  * 包含標題列、散戶/大戶門檻下拉選單、結果卡片、進度條以及狀態列
- * 
+ *
  * @param doc - DOM Document 物件 (預設為全域 document)
  * @returns 建立完成的面板 HTMLDivElement
  */
@@ -43,28 +43,19 @@ export function createPanel(doc: Document = document): HTMLDivElement {
         <div class="stk-body" id="stk-content">
             <div class="stk-row">
                 <label class="stk-label">
-                    <span>👥 散戶定義</span>
-                    <span class="stk-label-hint">≤ 該級距</span>
-                </label>
-                <select id="retail-lvl" class="stk-select"></select>
-            </div>
-            <div class="stk-row">
-                <label class="stk-label">
                     <span>🏦 大戶定義</span>
                     <span class="stk-label-hint">≥ 該級距</span>
                 </label>
                 <select id="whale-lvl" class="stk-select"></select>
             </div>
+            <div class="stk-row">
+                <label class="stk-label">
+                    <span>👥 散戶定義</span>
+                    <span class="stk-label-hint">≤ 該級距</span>
+                </label>
+                <select id="retail-lvl" class="stk-select"></select>
+            </div>
             <div class="stk-result">
-                <div class="stk-result-card stk-retail">
-                    <div class="stk-result-header">
-                        <span class="stk-result-label">👥 散戶合計</span>
-                        <span id="res-retail" class="stk-val-num">-- %</span>
-                    </div>
-                    <div class="stk-progress">
-                        <div id="progress-retail" class="stk-progress-bar"></div>
-                    </div>
-                </div>
                 <div class="stk-result-card stk-whale">
                     <div class="stk-result-header">
                         <span class="stk-result-label">🏦 大戶合計</span>
@@ -72,6 +63,15 @@ export function createPanel(doc: Document = document): HTMLDivElement {
                     </div>
                     <div class="stk-progress">
                         <div id="progress-whale" class="stk-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="stk-result-card stk-retail">
+                    <div class="stk-result-header">
+                        <span class="stk-result-label">👥 散戶合計</span>
+                        <span id="res-retail" class="stk-val-num">-- %</span>
+                    </div>
+                    <div class="stk-progress">
+                        <div id="progress-retail" class="stk-progress-bar"></div>
                     </div>
                 </div>
             </div>
@@ -88,7 +88,7 @@ export function createPanel(doc: Document = document): HTMLDivElement {
 /**
  * 移除畫面上既有的統計面板 (若存在)
  * 用於重新載入或重複初始化時避免畫面出現多個面板
- * 
+ *
  * @param doc - DOM Document 物件 (預設為全域 document)
  */
 export function removeExistingPanel(doc: Document = document): void {
@@ -98,7 +98,7 @@ export function removeExistingPanel(doc: Document = document): void {
 /**
  * 取得並快取面板內部的所有子元素節點參照
  * 方便後續進行事件綁定與數值更新
- * 
+ *
  * @param panel - 面板容器 DOM
  * @returns 包含所有內部控制項與顯示元件的 PanelElements 物件
  */
