@@ -58,7 +58,10 @@ export function createPanel(doc: Document = document): HTMLDivElement {
             <div class="stk-result">
                 <div class="stk-result-card stk-whale">
                     <div class="stk-result-header">
-                        <span class="stk-result-label">🏦 大戶合計</span>
+                        <div class="stk-result-info">
+                            <span class="stk-result-label">🏦 大戶合計</span>
+                            <span id="holders-whale" class="stk-val-holders">-- 人</span>
+                        </div>
                         <span id="res-whale" class="stk-val-num">-- %</span>
                     </div>
                     <div class="stk-progress">
@@ -67,7 +70,10 @@ export function createPanel(doc: Document = document): HTMLDivElement {
                 </div>
                 <div class="stk-result-card stk-retail">
                     <div class="stk-result-header">
-                        <span class="stk-result-label">👥 散戶合計</span>
+                        <div class="stk-result-info">
+                            <span class="stk-result-label">👥 散戶合計</span>
+                            <span id="holders-retail" class="stk-val-holders">-- 人</span>
+                        </div>
                         <span id="res-retail" class="stk-val-num">-- %</span>
                     </div>
                     <div class="stk-progress">
@@ -110,6 +116,8 @@ export function getPanelElements(panel: HTMLDivElement): PanelElements {
         whaleSelect: requireElement<HTMLSelectElement>(panel, "#whale-lvl"),
         retailResult: requireElement<HTMLElement>(panel, "#res-retail"),
         whaleResult: requireElement<HTMLElement>(panel, "#res-whale"),
+        retailHolders: requireElement<HTMLElement>(panel, "#holders-retail"),
+        whaleHolders: requireElement<HTMLElement>(panel, "#holders-whale"),
         retailProgress: requireElement<HTMLElement>(panel, "#progress-retail"),
         whaleProgress: requireElement<HTMLElement>(panel, "#progress-whale"),
         status: requireElement<HTMLElement>(panel, "#stk-status"),

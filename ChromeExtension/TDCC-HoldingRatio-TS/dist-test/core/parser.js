@@ -10,6 +10,16 @@ function parsePercentage(rawText) {
     return Number.parseFloat(normalizedText);
 }
 /**
+ * 將包含千分位逗號的人數字串解析為整數
+ *
+ * @param rawText - 原始文字（例如: " 12,345 " 或 "0"）
+ * @returns 解析後的人數整數，若解析失敗則為 NaN
+ */
+function parseHolders(rawText) {
+    const normalizedText = rawText.replace(/,/g, "").trim();
+    return Number.parseInt(normalizedText, 10);
+}
+/**
  * 從 TDCC 網頁中的股權分散表格解析各級距資料
  *
  * 表格欄位結構預期：
@@ -33,22 +43,23 @@ export function getStockData(doc = document) {
     const data = [];
     rows.forEach((row) => {
         const columns = row.querySelectorAll("td");
-        // 確保欄位數量足夠（至少需有 5 欄包含分級與比例）
+        // 確保欄位數量足夠（至少需有 5 欄包含分級、人數與比例）
         if (columns.length < 5) {
             return;
         }
-        // 解析分級 (第 1 欄) 與比例 (第 5 欄)
+        // 解析分級 (第 1 欄)、人數 (第 3 欄) 與比例 (第 5 欄)
         const level = Number.parseInt(columns[0]?.textContent?.trim() ?? "", 10);
+        const holders = parseHolders(columns[2]?.textContent ?? "");
         const percent = parsePercentage(columns[4]?.textContent ?? "");
         // 驗證級距範圍是否落在 1 ~ 15 之間
         if (Number.isNaN(level) || level < CONFIG.minLevel || level > CONFIG.maxLevel) {
             return;
         }
-        // 驗證百分比是否為有效數值
-        if (Number.isNaN(percent)) {
+        // 驗證人數與百分比是否為有效數值
+        if (Number.isNaN(holders) || holders < 0 || Number.isNaN(percent)) {
             return;
         }
-        data.push({ level, percent });
+        data.push({ level, holders, percent });
     });
     return data;
 }

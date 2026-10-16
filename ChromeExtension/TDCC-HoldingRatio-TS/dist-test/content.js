@@ -1,5 +1,5 @@
 import { CONFIG, LEVELS } from "./config/constants.js";
-import { calculateTotals, clampPercentage } from "./core/calculator.js";
+import { calculateTotals, clampPercentage, formatHolders } from "./core/calculator.js";
 import { getStockData } from "./core/parser.js";
 import { createPanel, getPanelElements, removeExistingPanel } from "./ui/panel.js";
 import { injectStyles } from "./ui/styles.js";
@@ -57,18 +57,19 @@ function bootstrap() {
      * 更新面板上的狀態提示文字
      *
      * @param rowCount - 當前解析到的有效級距列數
+     * @param totalHolders - 當前解析到的總股東人數
      */
-    const updateStatus = (rowCount) => {
+    const updateStatus = (rowCount, totalHolders = 0) => {
         if (rowCount === 0) {
             elements.status.textContent = "等待 TDCC 資料...";
             elements.dataStatus.textContent = "尚未取得資料";
             return;
         }
         elements.status.textContent = "資料已同步";
-        elements.dataStatus.textContent = `已取得 ${rowCount} 個級距`;
+        elements.dataStatus.textContent = `已取得 ${rowCount} 個級距 · 總人數 ${formatHolders(totalHolders)}`;
     };
     /**
-     * 重新解析表格資料、計算持股比例並更新 UI
+     * 重新解析表格資料、計算持股比例與人數並更新 UI
      */
     const refresh = () => {
         const data = getStockData();
@@ -76,6 +77,8 @@ function bootstrap() {
         if (data.length === 0) {
             elements.retailResult.textContent = "-- %";
             elements.whaleResult.textContent = "-- %";
+            elements.retailHolders.textContent = "-- 人";
+            elements.whaleHolders.textContent = "-- 人";
             updateProgressBar(elements.retailProgress, 0);
             updateProgressBar(elements.whaleProgress, 0);
             updateStatus(0);
@@ -86,12 +89,14 @@ function bootstrap() {
         const whaleLevel = Number(elements.whaleSelect.value);
         // 核心計算
         const totals = calculateTotals(data, retailLevel, whaleLevel);
-        // 更新畫面數值與進度條
+        // 更新畫面數值、人數與進度條
         elements.retailResult.textContent = `${totals.retailTotal.toFixed(2)} %`;
         elements.whaleResult.textContent = `${totals.whaleTotal.toFixed(2)} %`;
+        elements.retailHolders.textContent = formatHolders(totals.retailHolders);
+        elements.whaleHolders.textContent = formatHolders(totals.whaleHolders);
         updateProgressBar(elements.retailProgress, totals.retailTotal);
         updateProgressBar(elements.whaleProgress, totals.whaleTotal);
-        updateStatus(data.length);
+        updateStatus(data.length, totals.totalHolders);
     };
     /**
      * 切換面板的展開與收合狀態

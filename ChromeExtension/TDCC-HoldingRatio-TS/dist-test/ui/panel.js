@@ -38,35 +38,41 @@ export function createPanel(doc = document) {
         <div class="stk-body" id="stk-content">
             <div class="stk-row">
                 <label class="stk-label">
-                    <span>👥 散戶定義</span>
-                    <span class="stk-label-hint">≤ 該級距</span>
-                </label>
-                <select id="retail-lvl" class="stk-select"></select>
-            </div>
-            <div class="stk-row">
-                <label class="stk-label">
                     <span>🏦 大戶定義</span>
                     <span class="stk-label-hint">≥ 該級距</span>
                 </label>
                 <select id="whale-lvl" class="stk-select"></select>
             </div>
+            <div class="stk-row">
+                <label class="stk-label">
+                    <span>👥 散戶定義</span>
+                    <span class="stk-label-hint">≤ 該級距</span>
+                </label>
+                <select id="retail-lvl" class="stk-select"></select>
+            </div>
             <div class="stk-result">
-                <div class="stk-result-card stk-retail">
-                    <div class="stk-result-header">
-                        <span class="stk-result-label">👥 散戶合計</span>
-                        <span id="res-retail" class="stk-val-num">-- %</span>
-                    </div>
-                    <div class="stk-progress">
-                        <div id="progress-retail" class="stk-progress-bar"></div>
-                    </div>
-                </div>
                 <div class="stk-result-card stk-whale">
                     <div class="stk-result-header">
-                        <span class="stk-result-label">🏦 大戶合計</span>
+                        <div class="stk-result-info">
+                            <span class="stk-result-label">🏦 大戶合計</span>
+                            <span id="holders-whale" class="stk-val-holders">-- 人</span>
+                        </div>
                         <span id="res-whale" class="stk-val-num">-- %</span>
                     </div>
                     <div class="stk-progress">
                         <div id="progress-whale" class="stk-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="stk-result-card stk-retail">
+                    <div class="stk-result-header">
+                        <div class="stk-result-info">
+                            <span class="stk-result-label">👥 散戶合計</span>
+                            <span id="holders-retail" class="stk-val-holders">-- 人</span>
+                        </div>
+                        <span id="res-retail" class="stk-val-num">-- %</span>
+                    </div>
+                    <div class="stk-progress">
+                        <div id="progress-retail" class="stk-progress-bar"></div>
                     </div>
                 </div>
             </div>
@@ -102,6 +108,8 @@ export function getPanelElements(panel) {
         whaleSelect: requireElement(panel, "#whale-lvl"),
         retailResult: requireElement(panel, "#res-retail"),
         whaleResult: requireElement(panel, "#res-whale"),
+        retailHolders: requireElement(panel, "#holders-retail"),
+        whaleHolders: requireElement(panel, "#holders-whale"),
         retailProgress: requireElement(panel, "#progress-retail"),
         whaleProgress: requireElement(panel, "#progress-whale"),
         status: requireElement(panel, "#stk-status"),

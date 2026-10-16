@@ -165,9 +165,22 @@ const PANEL_STYLES = `
     margin-bottom: 8px;
 }
 
+.stk-result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
 .stk-result-label {
     font-size: 11px;
     color: #77838f;
+}
+
+.stk-val-holders {
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #475569;
 }
 
 .stk-val-num {

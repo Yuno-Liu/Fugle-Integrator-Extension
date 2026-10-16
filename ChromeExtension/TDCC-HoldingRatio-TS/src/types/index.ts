@@ -14,18 +14,26 @@ export interface LevelOption {
 export interface StockLevelData {
     /** 持股分級編號 (1 ~ 15) */
     level: number;
+    /** 該級距股東人數 */
+    holders: number;
     /** 該級距佔集保庫存的持股比例 (%) */
     percent: number;
 }
 
 /**
- * 散戶與大戶持股比例計算結果
+ * 散戶與大戶持股比例及人數計算結果
  */
 export interface Totals {
     /** 散戶持股合計比例 (%) */
     retailTotal: number;
     /** 大戶持股合計比例 (%) */
     whaleTotal: number;
+    /** 散戶合計人數 */
+    retailHolders: number;
+    /** 大戶合計人數 */
+    whaleHolders: number;
+    /** 總股東人數 */
+    totalHolders: number;
 }
 
 /**
@@ -44,6 +52,10 @@ export interface PanelElements {
     retailResult: HTMLElement;
     /** 大戶比例文字顯示元件 */
     whaleResult: HTMLElement;
+    /** 散戶人數文字顯示元件 */
+    retailHolders: HTMLElement;
+    /** 大戶人數文字顯示元件 */
+    whaleHolders: HTMLElement;
     /** 散戶比例進度條元件 */
     retailProgress: HTMLElement;
     /** 大戶比例進度條元件 */
