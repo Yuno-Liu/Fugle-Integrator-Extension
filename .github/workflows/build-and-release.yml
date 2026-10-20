@@ -9,6 +9,7 @@ on:
       - "localstorage-v*"
       - "tdcc-v*"
       - "autorefresh-v*"
+      - "antigravity-v*"
   workflow_dispatch:
     inputs:
       target:
@@ -23,6 +24,7 @@ on:
           - "localstorage"
           - "tdcc"
           - "autorefresh"
+          - "antigravity"
       tag_name:
         description: "Release tag name (optional when manual run)"
         required: false
@@ -65,13 +67,15 @@ jobs:
           BUILD_LOCALSTORAGE=false
           BUILD_TDCC=false
           BUILD_AUTOREFRESH=false
+          BUILD_ANTIGRAVITY=false
 
-          if [ "$INPUT_TARGET" = "all" ] || [[ "$REF" == v* && "$REF" != fugle-v* && "$REF" != gemini-v* && "$REF" != localstorage-v* && "$REF" != tdcc-v* && "$REF" != autorefresh-v* ]]; then
+          if [ "$INPUT_TARGET" = "all" ] || [[ "$REF" == v* && "$REF" != fugle-v* && "$REF" != gemini-v* && "$REF" != localstorage-v* && "$REF" != tdcc-v* && "$REF" != autorefresh-v* && "$REF" != antigravity-v* ]]; then
             BUILD_FUGLE=true
             BUILD_GEMINI=true
             BUILD_LOCALSTORAGE=true
             BUILD_TDCC=true
             BUILD_AUTOREFRESH=true
+            BUILD_ANTIGRAVITY=true
             echo "release_type=all" >> "$GITHUB_OUTPUT"
           elif [ "$INPUT_TARGET" = "fugle" ] || [[ "$REF" == fugle-v* ]]; then
             BUILD_FUGLE=true
@@ -88,12 +92,16 @@ jobs:
           elif [ "$INPUT_TARGET" = "autorefresh" ] || [[ "$REF" == autorefresh-v* ]]; then
             BUILD_AUTOREFRESH=true
             echo "release_type=autorefresh" >> "$GITHUB_OUTPUT"
+          elif [ "$INPUT_TARGET" = "antigravity" ] || [[ "$REF" == antigravity-v* ]]; then
+            BUILD_ANTIGRAVITY=true
+            echo "release_type=antigravity" >> "$GITHUB_OUTPUT"
           else
             BUILD_FUGLE=true
             BUILD_GEMINI=true
             BUILD_LOCALSTORAGE=true
             BUILD_TDCC=true
             BUILD_AUTOREFRESH=true
+            BUILD_ANTIGRAVITY=true
             echo "release_type=all" >> "$GITHUB_OUTPUT"
           fi
 
@@ -102,6 +110,7 @@ jobs:
           echo "build_localstorage=$BUILD_LOCALSTORAGE" >> "$GITHUB_OUTPUT"
           echo "build_tdcc=$BUILD_TDCC" >> "$GITHUB_OUTPUT"
           echo "build_autorefresh=$BUILD_AUTOREFRESH" >> "$GITHUB_OUTPUT"
+          echo "build_antigravity=$BUILD_ANTIGRAVITY" >> "$GITHUB_OUTPUT"
 
       - name: Prepare Releases Directory
         run: mkdir -p releases
@@ -157,6 +166,17 @@ jobs:
           zip -r ../../releases/AutoRefresh-${{ steps.config.outputs.release_tag }}.zip dist/ manifest.json popup.html README.md
           cd ../..
 
+      - name: Build Antigravity Translator
+        if: steps.config.outputs.build_antigravity == 'true'
+        run: |
+          cd ChromeExtension/AntigravityTranslator-TS
+          npm ci || npm install
+          npm run typecheck
+          npm run test
+          npm run build
+          zip -r ../../releases/AntigravityTranslator-${{ steps.config.outputs.release_tag }}.zip dist/ bridge/ manifest.json popup.html options.html README.md
+          cd ../..
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -202,6 +222,12 @@ jobs:
           if [ "${{ steps.config.outputs.build_autorefresh }}" = "true" ]; then
             cat << EOF >> release_body.md
           - **AutoRefresh-$TAG.zip** - 網頁自動刷新器 (自訂秒數、懸浮小工具、略過快取、隨機浮動)
+          EOF
+          fi
+
+          if [ "${{ steps.config.outputs.build_antigravity }}" = "true" ]; then
+            cat << EOF >> release_body.md
+          - **AntigravityTranslator-$TAG.zip** - Antigravity 網頁全站翻譯器 (基於 Antigravity CLI gemini-3.8-flash low，支援雙語對照/替換/懸停模式、6大領域風格與專屬術語庫)
           EOF
           fi
 

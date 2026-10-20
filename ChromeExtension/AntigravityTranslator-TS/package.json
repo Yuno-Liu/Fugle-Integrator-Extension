@@ -1,0 +1,31 @@
+{
+  "name": "antigravity-translator-ts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "基於 Antigravity CLI (gemini-3.8-flash low) 的全站智慧網頁翻譯與高度自訂擴充套件",
+  "scripts": {
+    "build": "npm run build:background && npm run build:content && npm run build:popup && npm run build:options && npm run copy:assets",
+    "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020",
+    "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020",
+    "build:popup": "esbuild src/popup.ts --bundle --outfile=dist/popup.js --format=iife --target=es2020",
+    "build:options": "esbuild src/options.ts --bundle --outfile=dist/options.js --format=iife --target=es2020",
+    "copy:assets": "node -e \"const fs=require('fs'); if(!fs.existsSync('dist')) fs.mkdirSync('dist',{recursive:true}); fs.copyFileSync('manifest.json','dist/manifest.json'); fs.copyFileSync('popup.html','dist/popup.html'); fs.copyFileSync('options.html','dist/options.html');\"",
+    "watch": "concurrently \"npm run watch:background\" \"npm run watch:content\" \"npm run watch:popup\" \"npm run watch:options\"",
+    "watch:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020 --watch",
+    "watch:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 --watch",
+    "watch:popup": "esbuild src/popup.ts --bundle --outfile=dist/popup.js --format=iife --target=es2020 --watch",
+    "watch:options": "esbuild src/options.ts --bundle --outfile=dist/options.js --format=iife --target=es2020 --watch",
+    "bridge": "node bridge/server.mjs",
+    "clean": "rimraf dist dist-test",
+    "typecheck": "tsc --noEmit",
+    "build:test": "tsc -p tsconfig.test.json",
+    "test": "npm run build:test && node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "concurrently": "^9.1.2",
+    "esbuild": "^0.27.4",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.2"
+  }
+}

@@ -34,6 +34,9 @@ jobs:
           - name: AutoRefresh
             path: ChromeExtension/AutoRefresh-TS
             has_test: false
+          - name: AntigravityTranslator
+            path: ChromeExtension/AntigravityTranslator-TS
+            has_test: true
 
     steps:
       - name: Checkout repository

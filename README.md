@@ -139,6 +139,23 @@
 **安裝步驟：**
 使用「載入未封裝項目」選擇 `ChromeExtension/AutoRefresh-TS/dist` 資料夾即可完成安裝。
 
+### 🌐 全站智慧網頁翻譯器 (AntigravityTranslator-TS)
+
+本專案提供一個基於 **Google Antigravity CLI (`agy`)** 驅動的高品質網頁翻譯擴充功能，專為外語科技文獻、財經投資分析與學術論文閱讀量身打造：
+- **Antigravity CLI 原生驅動**：遵循專案分流規範，調度本機 `gemini-3.8-flash` 與 `low` 推理深度，達成毫秒級極速低延遲回應。
+- **三種彈性呈現模式**：支援「雙語對照」（原文下方無損注入譯文）、「直接替換」與「懸停對照」（按住 `Alt` / `Control` / `Shift` 顯示浮動翻譯氣泡）。
+- **深色科技感介面與即時預覽**：提供快速 Popup 控制面板與雙欄式設定中心 (Options Dashboard)，內建即時視覺排版預覽卡片 (Live Preview Box)。
+- **六大專業領域翻譯風格**：自然流暢、科技工程（保留程式術語與縮寫）、財經投資（專業證券指標與商業語氣）、學術論文、精簡摘要、自訂 Prompt。
+- **專屬術語表與強制對照**：支援自訂關鍵字對照，內建一鍵載入台美股財經常用術語（EPS、YoY、ROE 等）與 AI/軟體工程常用術語（LLM、Prompt、Agent、RAG 等）。
+- **可視區域優先與快取**：首屏優先載入，動態滾動懶加載翻譯，搭配本地快取節省運算資源。
+- **SPA 動態監聽與網域規則**：支援自動翻譯網域清單、黑名單、CSS 選擇器排除與單頁應用 MutationObserver。
+
+**安裝與啟動步驟：**
+1. 進入 `ChromeExtension/AntigravityTranslator-TS` 目錄安裝相依並編譯：`npm install && npm run build`
+2. 啟動本機 CLI 橋接服務：`npm run bridge` (伺服器監聽於 `http://127.0.0.1:18765`)
+3. 在 Chrome `chrome://extensions/` 點選「載入未封裝項目」，選擇 `ChromeExtension/AntigravityTranslator-TS/dist` 資料夾即可完成安裝。  
+詳見 [AntigravityTranslator-TS 說明文件](ChromeExtension/AntigravityTranslator-TS/README.md)。
+
 ## 📖 使用說明
 
 1.  安裝完成後，前往 [富果 Fugle](https://www.fugle.tw/) 網站並進入任一個股頁面 (例如：台積電 2330)。
