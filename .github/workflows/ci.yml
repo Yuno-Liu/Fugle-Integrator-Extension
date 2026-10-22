@@ -13,31 +13,8 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Test (${{ matrix.extension.name }})
+    name: Build & Typecheck (Fugle Integrator)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        extension:
-          - name: FugleIntegrator
-            path: ChromeExtension/FugleIntegrator-TS
-            has_test: false
-          - name: GeminiUrlPrompt
-            path: ChromeExtension/GeminiUrlPrompt-TS
-            has_test: false
-          - name: LocalStorageReader
-            path: ChromeExtension/Localstorage-reader-TS
-            has_test: false
-          - name: TDCCHoldingRatio
-            path: ChromeExtension/TDCC-HoldingRatio-TS
-            has_test: true
-          - name: AutoRefresh
-            path: ChromeExtension/AutoRefresh-TS
-            has_test: false
-          - name: AntigravityTranslator
-            path: ChromeExtension/AntigravityTranslator-TS
-            has_test: true
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,20 +23,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
-        working-directory: ${{ matrix.extension.path }}
         run: npm ci || npm install
 
       - name: Typecheck
-        working-directory: ${{ matrix.extension.path }}
         run: npm run typecheck
 
-      - name: Run Tests
-        if: matrix.extension.has_test == true
-        working-directory: ${{ matrix.extension.path }}
-        run: npm run test
-
       - name: Build Extension
-        working-directory: ${{ matrix.extension.path }}
         run: npm run build

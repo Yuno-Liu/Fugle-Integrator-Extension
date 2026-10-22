@@ -1,30 +1,12 @@
-name: Build and Release Chrome Extensions
+name: Build and Release Fugle Integrator Extension
 
 on:
   push:
     tags:
       - "v*"
       - "fugle-v*"
-      - "gemini-v*"
-      - "localstorage-v*"
-      - "tdcc-v*"
-      - "autorefresh-v*"
-      - "antigravity-v*"
   workflow_dispatch:
     inputs:
-      target:
-        description: "Target extension to release"
-        required: true
-        default: "all"
-        type: choice
-        options:
-          - "all"
-          - "fugle"
-          - "gemini"
-          - "localstorage"
-          - "tdcc"
-          - "autorefresh"
-          - "antigravity"
       tag_name:
         description: "Release tag name (optional when manual run)"
         required: false
@@ -44,12 +26,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - name: Determine Target Extensions & Version
+      - name: Determine Version
         id: config
         run: |
           REF="${{ github.ref_name }}"
-          INPUT_TARGET="${{ inputs.target }}"
           MANUAL_TAG="${{ inputs.tag_name }}"
 
           if [ -n "$MANUAL_TAG" ]; then
@@ -62,187 +44,47 @@ jobs:
 
           echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
 
-          BUILD_FUGLE=false
-          BUILD_GEMINI=false
-          BUILD_LOCALSTORAGE=false
-          BUILD_TDCC=false
-          BUILD_AUTOREFRESH=false
-          BUILD_ANTIGRAVITY=false
+      - name: Install dependencies
+        run: npm ci || npm install
 
-          if [ "$INPUT_TARGET" = "all" ] || [[ "$REF" == v* && "$REF" != fugle-v* && "$REF" != gemini-v* && "$REF" != localstorage-v* && "$REF" != tdcc-v* && "$REF" != autorefresh-v* && "$REF" != antigravity-v* ]]; then
-            BUILD_FUGLE=true
-            BUILD_GEMINI=true
-            BUILD_LOCALSTORAGE=true
-            BUILD_TDCC=true
-            BUILD_AUTOREFRESH=true
-            BUILD_ANTIGRAVITY=true
-            echo "release_type=all" >> "$GITHUB_OUTPUT"
-          elif [ "$INPUT_TARGET" = "fugle" ] || [[ "$REF" == fugle-v* ]]; then
-            BUILD_FUGLE=true
-            echo "release_type=fugle" >> "$GITHUB_OUTPUT"
-          elif [ "$INPUT_TARGET" = "gemini" ] || [[ "$REF" == gemini-v* ]]; then
-            BUILD_GEMINI=true
-            echo "release_type=gemini" >> "$GITHUB_OUTPUT"
-          elif [ "$INPUT_TARGET" = "localstorage" ] || [[ "$REF" == localstorage-v* ]]; then
-            BUILD_LOCALSTORAGE=true
-            echo "release_type=localstorage" >> "$GITHUB_OUTPUT"
-          elif [ "$INPUT_TARGET" = "tdcc" ] || [[ "$REF" == tdcc-v* ]]; then
-            BUILD_TDCC=true
-            echo "release_type=tdcc" >> "$GITHUB_OUTPUT"
-          elif [ "$INPUT_TARGET" = "autorefresh" ] || [[ "$REF" == autorefresh-v* ]]; then
-            BUILD_AUTOREFRESH=true
-            echo "release_type=autorefresh" >> "$GITHUB_OUTPUT"
-          elif [ "$INPUT_TARGET" = "antigravity" ] || [[ "$REF" == antigravity-v* ]]; then
-            BUILD_ANTIGRAVITY=true
-            echo "release_type=antigravity" >> "$GITHUB_OUTPUT"
-          else
-            BUILD_FUGLE=true
-            BUILD_GEMINI=true
-            BUILD_LOCALSTORAGE=true
-            BUILD_TDCC=true
-            BUILD_AUTOREFRESH=true
-            BUILD_ANTIGRAVITY=true
-            echo "release_type=all" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Typecheck
+        run: npm run typecheck
 
-          echo "build_fugle=$BUILD_FUGLE" >> "$GITHUB_OUTPUT"
-          echo "build_gemini=$BUILD_GEMINI" >> "$GITHUB_OUTPUT"
-          echo "build_localstorage=$BUILD_LOCALSTORAGE" >> "$GITHUB_OUTPUT"
-          echo "build_tdcc=$BUILD_TDCC" >> "$GITHUB_OUTPUT"
-          echo "build_autorefresh=$BUILD_AUTOREFRESH" >> "$GITHUB_OUTPUT"
-          echo "build_antigravity=$BUILD_ANTIGRAVITY" >> "$GITHUB_OUTPUT"
+      - name: Build Extension
+        run: npm run build
 
-      - name: Prepare Releases Directory
-        run: mkdir -p releases
-
-      - name: Build Fugle Integrator
-        if: steps.config.outputs.build_fugle == 'true'
+      - name: Package Extension
         run: |
-          cd ChromeExtension/FugleIntegrator-TS
-          npm ci || npm install
-          npm run typecheck
-          npm run build
-          zip -r ../../releases/FugleIntegrator-${{ steps.config.outputs.release_tag }}.zip dist/ manifest.json stock-data.json options.html README.md
-          cd ../..
-
-      - name: Build Gemini URL Prompt
-        if: steps.config.outputs.build_gemini == 'true'
-        run: |
-          cd ChromeExtension/GeminiUrlPrompt-TS
-          npm ci || npm install
-          npm run typecheck
-          npm run build
-          zip -r ../../releases/GeminiUrlPrompt-${{ steps.config.outputs.release_tag }}.zip dist/ manifest.json manifest.dist.json README.md
-          cd ../..
-
-      - name: Build LocalStorage Reader
-        if: steps.config.outputs.build_localstorage == 'true'
-        run: |
-          cd ChromeExtension/Localstorage-reader-TS
-          npm ci || npm install
-          npm run typecheck
-          npm run build
-          zip -r ../../releases/LocalStorageReader-${{ steps.config.outputs.release_tag }}.zip dist/ manifest.json popup.html
-          cd ../..
-
-      - name: Build TDCC Holding Ratio
-        if: steps.config.outputs.build_tdcc == 'true'
-        run: |
-          cd ChromeExtension/TDCC-HoldingRatio-TS
-          npm ci || npm install
-          npm run typecheck
-          npm run test
-          npm run build
-          zip -r ../../releases/TDCC-HoldingRatio-${{ steps.config.outputs.release_tag }}.zip dist/ manifest.json README.md
-          cd ../..
-
-      - name: Build Auto Refresh
-        if: steps.config.outputs.build_autorefresh == 'true'
-        run: |
-          cd ChromeExtension/AutoRefresh-TS
-          npm ci || npm install
-          npm run typecheck
-          npm run build
-          zip -r ../../releases/AutoRefresh-${{ steps.config.outputs.release_tag }}.zip dist/ manifest.json popup.html README.md
-          cd ../..
-
-      - name: Build Antigravity Translator
-        if: steps.config.outputs.build_antigravity == 'true'
-        run: |
-          cd ChromeExtension/AntigravityTranslator-TS
-          npm ci || npm install
-          npm run typecheck
-          npm run test
-          npm run build
-          zip -r ../../releases/AntigravityTranslator-${{ steps.config.outputs.release_tag }}.zip dist/ bridge/ manifest.json popup.html options.html README.md
-          cd ../..
+          TAG="${{ steps.config.outputs.release_tag }}"
+          mkdir -p releases
+          zip -r releases/FugleIntegrator-$TAG.zip dist/ manifest.json stock-data.json options.html README.md
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: extension-packages-${{ steps.config.outputs.release_tag }}
+          name: FugleIntegrator-${{ steps.config.outputs.release_tag }}
           path: releases/*.zip
 
       - name: Generate Release Notes
         run: |
           TAG="${{ steps.config.outputs.release_tag }}"
-
           cat << 'EOF' > release_body.md
-          ## Chrome Extensions Release - $TAG
+          ## 富果整合器 (Fugle Integrator) - $TAG
 
-          ### 📦 Included Packages
-          EOF
+          ### 📦 發布套件
+          - **FugleIntegrator-$TAG.zip** - 富果整合器 Chrome 擴充功能主套件
 
-          sed -i "s/\$TAG/$TAG/g" release_body.md
-
-          if [ "${{ steps.config.outputs.build_fugle }}" = "true" ]; then
-            cat << EOF >> release_body.md
-          - **FugleIntegrator-$TAG.zip** - 富果整合器 (主擴充功能：產業鏈、機構評等、財務指標、預估量等)
-          EOF
-          fi
-
-          if [ "${{ steps.config.outputs.build_gemini }}" = "true" ]; then
-            cat << EOF >> release_body.md
-          - **GeminiUrlPrompt-$TAG.zip** - Gemini URL Prompt 自動填入提示詞工具
-          EOF
-          fi
-
-          if [ "${{ steps.config.outputs.build_localstorage }}" = "true" ]; then
-            cat << EOF >> release_body.md
-          - **LocalStorageReader-$TAG.zip** - LocalStorage Key 讀取與管理工具
-          EOF
-          fi
-
-          if [ "${{ steps.config.outputs.build_tdcc }}" = "true" ]; then
-            cat << EOF >> release_body.md
-          - **TDCC-HoldingRatio-$TAG.zip** - 集保股權分散比例統計工具
-          EOF
-          fi
-
-          if [ "${{ steps.config.outputs.build_autorefresh }}" = "true" ]; then
-            cat << EOF >> release_body.md
-          - **AutoRefresh-$TAG.zip** - 網頁自動刷新器 (自訂秒數、懸浮小工具、略過快取、隨機浮動)
-          EOF
-          fi
-
-          if [ "${{ steps.config.outputs.build_antigravity }}" = "true" ]; then
-            cat << EOF >> release_body.md
-          - **AntigravityTranslator-$TAG.zip** - Antigravity 網頁全站翻譯器 (基於 Antigravity CLI gemini-3.8-flash low，支援雙語對照/替換/懸停模式、6大領域風格與專屬術語庫)
-          EOF
-          fi
-
-          cat << 'EOF' >> release_body.md
-
-          ### 🚀 Installation Instructions
-          1. 下載所需擴充功能的 `.zip` 檔案
+          ### 🚀 安裝說明
+          1. 下載 `FugleIntegrator-$TAG.zip`
           2. 解壓縮檔案至本機資料夾
           3. 開啟 Google Chrome 瀏覽器，進入 `chrome://extensions/`
           4. 開啟右上角 **「開發人員模式」 (Developer mode)**
-          5. 點選 **「載入未封裝項目」 (Load unpacked)** 並選取解壓縮後的資料夾 (或資料夾內的 `dist` 目錄)
+          5. 點選 **「載入未封裝項目」 (Load unpacked)** 並選取解壓縮後的 `dist` 目錄
 
           ---
           *由 GitHub Actions 自動建置發布*
           EOF
+          sed -i "s/\$TAG/$TAG/g" release_body.md
 
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2

@@ -7,7 +7,7 @@
         "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020",
         "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020",
         "build:options": "esbuild src/options.ts --bundle --outfile=dist/options.js --format=iife --target=es2020",
-        "copy:assets": "node -e \"const fs=require('fs'); fs.copyFileSync('manifest.json', 'dist/manifest.json'); fs.copyFileSync('stock-data.json', 'dist/stock-data.json'); fs.copyFileSync('options.html', 'dist/options.html');\"",
+        "copy:assets": "node -e \"const fs=require('fs'); if (!fs.existsSync('dist')) fs.mkdirSync('dist', { recursive: true }); fs.copyFileSync('manifest.json', 'dist/manifest.json'); fs.copyFileSync('stock-data.json', 'dist/stock-data.json'); fs.copyFileSync('options.html', 'dist/options.html');\"",
         "watch": "npm run build && concurrently \"npm run watch:background\" \"npm run watch:content\" \"npm run watch:options\"",
         "watch:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020 --watch",
         "watch:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 --watch",
