@@ -186,6 +186,7 @@ npm run clean
 為了保持本專案的簡潔與專注，以下輔助擴充工具已拆分為獨立的 GitHub 倉庫維護：
 
 - 🤖 **[GeminiUrlPrompt](https://github.com/Yuno-Liu/GeminiUrlPrompt)**：自動讀取 URL 參數 `?p=` 並自動填入送出至 Google Gemini 對話框的 Chrome 擴充功能，完美搭配富果整合器的 Gemini 分析按鈕。
+- 💬 **[ChatGptUrlPrompt](https://github.com/Yuno-Liu/ChatGptUrlPrompt)**：自動讀取 URL 參數 `?p=` 並自動填入送出至 ChatGPT、Custom GPTs 與專案工作區（Projects），內建網址產生器與豐富選項設定中心。
 - ⏱️ **[AutoRefresh](https://github.com/Yuno-Liu/AutoRefresh)**：分頁獨立計時、毛玻璃懸浮膠囊、強制略過快取與隨機浮動之網頁定時自動刷新套件。
 - 🌐 **[AntigravityTranslator](https://github.com/Yuno-Liu/AntigravityTranslator)**：由 Antigravity CLI (Gemini 3.8 Flash) 驅動之全站雙語翻譯器，支援雙語對照、直接替換、懸停氣泡與專屬金融/科技術語庫。
 - 📌 **[Localstorage-reader](https://github.com/Yuno-Liu/Localstorage-reader)**：快速查詢當前分頁任意指定 LocalStorage Key/Value 並提供一鍵複製之開發輔助工具。
