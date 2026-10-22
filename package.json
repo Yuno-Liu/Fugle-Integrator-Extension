@@ -1,6 +1,7 @@
 {
     "name": "fugle-integrator",
     "version": "1.0.0",
+    "type": "module",
     "description": "富果整合器",
     "scripts": {
         "build": "npm run build:background && npm run build:content && npm run build:options && npm run copy:assets",
@@ -12,8 +13,10 @@
         "watch:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020 --watch",
         "watch:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 --watch",
         "watch:options": "esbuild src/options.ts --bundle --outfile=dist/options.js --format=iife --target=es2020 --watch",
-        "clean": "rimraf dist/*.js dist/*.js.map",
-        "typecheck": "tsc --noEmit"
+        "clean": "rimraf dist dist-test",
+        "typecheck": "tsc --noEmit",
+        "build:test": "tsc -p tsconfig.test.json",
+        "test": "npm run build:test && node --test tests/*.test.mjs"
     },
     "devDependencies": {
         "@types/chrome": "^0.0.287",
@@ -31,4 +34,3 @@
     "author": "",
     "license": "MIT"
 }
-

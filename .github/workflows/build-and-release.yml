@@ -50,6 +50,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Run Unit Tests
+        run: npm test
+
       - name: Build Extension
         run: npm run build
 

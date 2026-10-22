@@ -13,7 +13,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Typecheck (Fugle Integrator)
+    name: Build & Test (Fugle Integrator)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -30,6 +30,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Run Unit Tests
+        run: npm test
 
       - name: Build Extension
         run: npm run build

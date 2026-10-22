@@ -24,8 +24,8 @@
  * - background.ts: 透過 Chrome Runtime 發送請求
  */
 
-import type { FetchRequestMessage, FetchResponseMessage, ResultItem, RelationItem, EsunResultSet, ETFHoldingItem, TradingVolumeItem, MajorBuySellItem, MajorRatioResult } from "../types/index";
-import { FETCH_TIMEOUT, VOLUME_API_TOKEN_KEY, DEFAULT_VOLUME_TOKEN } from "../config/constants";
+import type { FetchRequestMessage, FetchResponseMessage, ResultItem, RelationItem, EsunResultSet, ETFHoldingItem, TradingVolumeItem, MajorBuySellItem, MajorRatioResult } from "../types/index.js";
+import { FETCH_TIMEOUT, VOLUME_API_TOKEN_KEY, DEFAULT_VOLUME_TOKEN } from "../config/constants.js";
 
 // ============================================================================
 // ⏱️ 效能優化函式
@@ -602,7 +602,6 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
         console.warn("⚠️ majorBuySellData is null or undefined");
         return null;
     }
-    debugger;
     let buyResultList: MajorBuySellItem[] | null = null;
     let sellResultList: MajorBuySellItem[] | null = null;
 
@@ -801,3 +800,4 @@ export function calculateMajorRatio(majorBuySellData: EsunResultSet<MajorBuySell
         totalVolume,
     };
 }
+

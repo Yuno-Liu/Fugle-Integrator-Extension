@@ -99,3 +99,5 @@ ehthumbs.db
 # 🌐 瀏覽器擴充功能簽名
 *.pem
 extension_key.txt
+
+dist-test/
