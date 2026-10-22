@@ -1,7 +1,7 @@
 {
-    "name": "fugle-integrator-ts",
+    "name": "fugle-integrator",
     "version": "1.0.0",
-    "description": "富果整合器 - TypeScript 版本",
+    "description": "富果整合器",
     "scripts": {
         "build": "npm run build:background && npm run build:content && npm run build:options && npm run copy:assets",
         "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020",
@@ -31,3 +31,4 @@
     "author": "",
     "license": "MIT"
 }
+

@@ -185,11 +185,11 @@ npm run clean
 
 為了保持本專案的簡潔與專注，以下輔助擴充工具已拆分為獨立的 GitHub 倉庫維護：
 
-- 🤖 **[GeminiUrlPrompt-TS](https://github.com/Yuno-Liu/GeminiUrlPrompt-TS)**：自動讀取 URL 參數 `?p=` 並自動填入送出至 Google Gemini 對話框的 Chrome 擴充功能，完美搭配富果整合器的 Gemini 分析按鈕。
-- ⏱️ **[AutoRefresh-TS](https://github.com/Yuno-Liu/AutoRefresh-TS)**：分頁獨立計時、毛玻璃懸浮膠囊、強制略過快取與隨機浮動之網頁定時自動刷新套件。
-- 🌐 **[AntigravityTranslator-TS](https://github.com/Yuno-Liu/AntigravityTranslator-TS)**：由 Antigravity CLI (Gemini 3.8 Flash) 驅動之全站雙語翻譯器，支援雙語對照、直接替換、懸停氣泡與專屬金融/科技術語庫。
-- 📌 **[Localstorage-reader-TS](https://github.com/Yuno-Liu/Localstorage-reader-TS)**：快速查詢當前分頁任意指定 LocalStorage Key/Value 並提供一鍵複製之開發輔助工具。
-- 📊 **[TDCC-HoldingRatio-TS](https://github.com/Yuno-Liu/TDCC-HoldingRatio-TS)**：臺灣集中保管結算所集保戶股權分散表之散戶與千張大戶持股比例即時動態計算工具。
+- 🤖 **[GeminiUrlPrompt](https://github.com/Yuno-Liu/GeminiUrlPrompt)**：自動讀取 URL 參數 `?p=` 並自動填入送出至 Google Gemini 對話框的 Chrome 擴充功能，完美搭配富果整合器的 Gemini 分析按鈕。
+- ⏱️ **[AutoRefresh](https://github.com/Yuno-Liu/AutoRefresh)**：分頁獨立計時、毛玻璃懸浮膠囊、強制略過快取與隨機浮動之網頁定時自動刷新套件。
+- 🌐 **[AntigravityTranslator](https://github.com/Yuno-Liu/AntigravityTranslator)**：由 Antigravity CLI (Gemini 3.8 Flash) 驅動之全站雙語翻譯器，支援雙語對照、直接替換、懸停氣泡與專屬金融/科技術語庫。
+- 📌 **[Localstorage-reader](https://github.com/Yuno-Liu/Localstorage-reader)**：快速查詢當前分頁任意指定 LocalStorage Key/Value 並提供一鍵複製之開發輔助工具。
+- 📊 **[TDCC-HoldingRatio](https://github.com/Yuno-Liu/TDCC-HoldingRatio)**：臺灣集中保管結算所集保戶股權分散表之散戶與千張大戶持股比例即時動態計算工具。
 
 ---
 
@@ -214,3 +214,4 @@ npm run clean
 ## 📜 授權
 
 本專案採用 **MIT 授權** (MIT License)。詳見 [LICENSE](LICENSE) 文件。
+
