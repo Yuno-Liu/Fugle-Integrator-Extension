@@ -68,7 +68,7 @@ export function loadStockDatabase(): Promise<StockDatabase | null> {
     // 如果已有載入中或已完成的 Promise，直接返回
     dbLoadPromise ??= new Promise((resolve) => {
         // 從遠端 API 取得股票資料庫
-        const dbUrl = "https://raw.githubusercontent.com/Yuno-Liu/Fugle-Integrator-Extension/refs/heads/main/ChromeExtension/FugleIntegrator-TS/stock-data.json";
+        const dbUrl = "https://raw.githubusercontent.com/Yuno-Liu/Fugle-Integrator-Extension/refs/heads/main/stock-data.json";
 
         fetch(dbUrl)
             .then((res) => res.json())
