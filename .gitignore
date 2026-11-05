@@ -105,3 +105,7 @@ dist-test/
 
 # 🧪 端對端測試輸出
 .e2e-output/
+
+# 🤖 Claude Code 本機檔案（專案設定 CLAUDE.md、.claude/agents 需提交）
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
