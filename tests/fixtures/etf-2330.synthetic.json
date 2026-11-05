@@ -1,0 +1,38 @@
+[
+ {
+  "symbol": "0050",
+  "name": "元大台灣50",
+  "stock_holding_ratio": 61.23,
+  "stock_holding_stocknum": 1312345678
+ },
+ {
+  "symbol": "006208",
+  "name": "富邦台50",
+  "stock_holding_ratio": 60.88,
+  "stock_holding_stocknum": 412345678
+ },
+ {
+  "symbol": "00878",
+  "name": "國泰永續高股息",
+  "stock_holding_ratio": 0,
+  "stock_holding_stocknum": 0
+ },
+ {
+  "symbol": "00881",
+  "name": "國泰台灣5G+",
+  "stock_holding_ratio": 30.12,
+  "stock_holding_stocknum": 98765432
+ },
+ {
+  "symbol": "00692",
+  "name": "",
+  "stock_holding_ratio": 55.5,
+  "stock_holding_stocknum": 23456789
+ },
+ {
+  "symbol": "",
+  "name": "invalid row (no symbol)",
+  "stock_holding_ratio": 1,
+  "stock_holding_stocknum": 1
+ }
+]
