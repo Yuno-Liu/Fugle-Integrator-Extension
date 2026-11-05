@@ -105,9 +105,11 @@ jobs:
         env:
           TAG: ${{ needs.build.outputs.release_tag }}
         run: |
-          ls -l releases
-          if [ "$(ls releases)" != "FugleIntegrator-$TAG.zip" ]; then
-            echo "::error::releases/ 應只有 FugleIntegrator-$TAG.zip"
+          ls -lA releases
+          EXPECTED="FugleIntegrator-$TAG.zip"
+          # ls -A 也列出隱藏檔；-f 確認是一般檔案，而不是同名的資料夾
+          if [ "$(ls -A releases)" != "$EXPECTED" ] || [ ! -f "releases/$EXPECTED" ]; then
+            echo "::error::releases/ 應只有 $EXPECTED 這一個檔案"
             exit 1
           fi
 
