@@ -27,10 +27,10 @@ jobs:
       sha: ${{ github.sha }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
           cache: "npm"
@@ -80,7 +80,7 @@ jobs:
           unzip -l "releases/FugleIntegrator-$TAG.zip"
 
       - name: Upload package
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-package
           path: releases/*.zip
@@ -94,10 +94,22 @@ jobs:
       contents: write
     steps:
       - name: Download package
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-package
           path: releases
+
+      # download-artifact v8 只在判斷為 zip 時才解壓縮，否則會把整個 artifact 存成一個檔案（檔名仍符合 *.zip）；
+      # 發布前確認拿到的正是建置產生的發布檔
+      - name: Verify package
+        env:
+          TAG: ${{ needs.build.outputs.release_tag }}
+        run: |
+          ls -l releases
+          if [ "$(ls releases)" != "FugleIntegrator-$TAG.zip" ]; then
+            echo "::error::releases/ 應只有 FugleIntegrator-$TAG.zip"
+            exit 1
+          fi
 
       - name: Generate release notes
         env:
@@ -123,12 +135,14 @@ jobs:
           EOF
 
       - name: Create or update GitHub release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ needs.build.outputs.release_tag }}
           target_commitish: ${{ needs.build.outputs.sha }}
           name: Release ${{ needs.build.outputs.release_tag }}
           body_path: release_body.md
           files: releases/*.zip
+          # 找不到發布檔時讓 job 失敗，而不是發布沒有附檔的 Release
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
