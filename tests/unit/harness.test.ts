@@ -1,7 +1,7 @@
 /**
  * 測試基礎設施自我檢查：esbuild 打包、jsdom、chrome 替身、fixture 載入。
  */
-import { mock, test } from "node:test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fixture } from "../helpers/fixtures";
 import { installFakeChrome } from "../helpers/chrome";
@@ -70,7 +70,7 @@ test("chrome 替身 dispatch：沒有 listener 保留通道 → undefined；多�
     }
 });
 
-test("fetch 替身：延遲期間中止 → AbortError；signal 已中止 → 立即拒絕；正常完成後移除 abort 監聽", async () => {
+test("fetch 替身：延遲期間中止 → AbortError；signal 已中止 → 立即拒絕；正常完成後移除 abort 監聽", async (t) => {
     const { fetch } = createFetch([["/slow", { body: { ok: 1 }, delayMs: 30 }]]);
 
     const during = new AbortController();
@@ -84,9 +84,9 @@ test("fetch 替身：延遲期間中止 → AbortError；signal 已中止 → �
     await assert.rejects(fetch("https://x.test/slow", { signal: before.signal }), { name: "AbortError" });
 
     const normal = new AbortController();
-    const removed = mock.method(normal.signal, "removeEventListener");
+    // t.mock 在測試結束時自動還原（斷言失敗也會）
+    const removed = t.mock.method(normal.signal, "removeEventListener");
     const res = await fetch("https://x.test/slow", { signal: normal.signal });
     assert.equal(res.status, 200);
     assert.equal(removed.mock.callCount(), 1, "完成後移除 abort 監聽");
-    mock.restoreAll();
 });
