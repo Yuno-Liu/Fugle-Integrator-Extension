@@ -18,7 +18,7 @@ import {
 import { escapeHtml, html, raw, joinHtml, safeHttpUrl, SafeHtml } from "../../src/utils/html";
 import { shortcutFromEvent, normalizeShortcut, isUsableShortcut, matchesShortcut, type ShortcutEvent } from "../../src/utils/shortcut";
 import { debounce, settleWithin } from "../../src/utils/timing";
-import { errorMessage } from "../../src/utils/log";
+import { debugText, errorMessage } from "../../src/utils/log";
 
 // ---------------------------------------------------------------------------
 // format.ts
@@ -606,9 +606,34 @@ describe("settleWithin", () => {
 // log.ts errorMessage
 // ---------------------------------------------------------------------------
 
+describe("debugText（開發版日誌的文字紀錄）", () => {
+    test("字串原樣，其他值轉為文字，以空白連接", () => {
+        assert.equal(debugText(["cache", "hit", 12, "ms", { a: 1 }, null, undefined]), `cache hit 12 ms {"a":1} null undefined`);
+    });
+
+    test("Error 取訊息（JSON.stringify 只會得到 {}）", () => {
+        assert.equal(debugText(["fetch failed", new TypeError("Failed to fetch")]), "fetch failed Failed to fetch");
+    });
+
+    test("循環參照、BigInt、沒有原型的物件 → 不拋錯（日誌不應中斷呼叫端）", () => {
+        const circular: Record<string, unknown> = {};
+        circular["self"] = circular;
+        const bare = Object.create(null) as Record<string, unknown>;
+        bare["self"] = bare;
+        assert.equal(debugText([circular, 10n, bare]), "[object Object] 10 [object Object]");
+    });
+});
+
 describe("errorMessage", () => {
     const circular: Record<string, unknown> = { a: 1 };
     circular["self"] = circular;
+
+    test("沒有原型且循環參照的物件（String() 也會拋錯）→ 不拋錯", () => {
+        const bare = Object.create(null) as Record<string, unknown>;
+        bare["self"] = bare;
+        assert.throws(() => String(bare), TypeError, "前提：String() 對沒有原型的物件會拋錯");
+        assert.equal(errorMessage(bare), "[object Object]");
+    });
 
     const cases: Array<[string, unknown, string]> = [
         ["Error → message", new Error("HTTP 500"), "HTTP 500"],

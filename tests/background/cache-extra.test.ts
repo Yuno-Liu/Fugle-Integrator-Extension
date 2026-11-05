@@ -454,3 +454,80 @@ describe("StockDbService 遠端版本重新導向", () => {
         assert.equal(storage.caches.get(DB_CACHE)?.store.has(STOCK_DB_REMOTE_URL) ?? false, false);
     });
 });
+
+// ============================================================================
+// stockdb.ts：寫入快取卡住
+// ============================================================================
+
+describe("StockDbService 寫入快取卡住（persistTimeoutMs）", () => {
+    const BUNDLED_URL = "chrome-extension://fake-id/stock-data.json";
+    const NOW = Date.UTC(2026, 10, 5, 1, 0, 0);
+    /** 開啟快取的上限；寫入約 2MB 的內容給 5 倍（100ms） */
+    const PERSIST_MS = 20;
+    const never = <T>(): Promise<T> => new Promise<T>(() => undefined);
+
+    const bundledDb = (): StockDatabase => fixture<StockDatabase>("stock-db-subset.json");
+    function remoteDb(): StockDatabase {
+        const db = bundledDb();
+        db.basicInfo.push({ 股票代碼: "7777", 股票名稱: "遠端新股", 股本_億元: 1 });
+        return db;
+    }
+
+    /** 在 ms 內完成回傳 true：把「永遠等待」變成明確的失敗，而不是讓測試卡住 */
+    async function finishesWithin(promise: Promise<unknown>, ms: number): Promise<boolean> {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<false>((resolve) => (timer = setTimeout(() => resolve(false), ms)));
+        try {
+            return await Promise.race([promise.then(() => true), timeout]);
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    function makeDb(storage: { open: (name: string) => Promise<unknown> }, bundledOk: boolean) {
+        const f = recordingFetch((url) =>
+            url === BUNDLED_URL && bundledOk ? jsonResponse(bundledDb()) : url === STOCK_DB_REMOTE_URL ? jsonResponse(remoteDb()) : new Response("nf", { status: 404 })
+        );
+        const svc = new StockDbService({
+            fetch: f.fetch,
+            caches: storage as unknown as CacheStorage,
+            now: () => NOW,
+            bundledUrl: BUNDLED_URL,
+            remoteUrl: STOCK_DB_REMOTE_URL,
+            ttlMs: DAY,
+            cacheName: "db-cache",
+            timeoutMs: 1_000,
+            refreshDelayMs: 0,
+            persistTimeoutMs: PERSIST_MS,
+        });
+        return { svc, remoteCalls: () => f.calls.filter((c) => c.url === STOCK_DB_REMOTE_URL).length };
+    }
+
+    test("put() 永遠不完成 → 背景更新仍會結束並採用遠端版，不會一直佔住更新", async () => {
+        let puts = 0;
+        const storage = {
+            open: async () => ({
+                match: async () => undefined,
+                put: () => {
+                    puts++;
+                    return never<void>();
+                },
+            }),
+        };
+        const { svc, remoteCalls } = makeDb(storage, true);
+        const first = await svc.getIndex();
+        assert.equal(first.getStock("7777"), null, "先用內建版");
+        assert.equal(await finishesWithin(svc.settled(), 1_000), true, "寫入卡住時，背景更新在時限後結束");
+        assert.equal(remoteCalls(), 1);
+        assert.equal(puts, 1, "有嘗試寫入快取");
+        assert.equal((await svc.getIndex()).getStock("7777")?.name, "遠端新股", "遠端版已採用");
+    });
+
+    test("內建版讀取失敗且 caches.open() 永遠不完成 → getIndex() 仍回傳遠端版，不會永遠等待", async () => {
+        const { svc, remoteCalls } = makeDb({ open: () => never() }, false);
+        const pending = svc.getIndex();
+        assert.equal(await finishesWithin(pending, 1_000), true, "讀取與寫入快取都在時限後放棄");
+        assert.equal((await pending).getStock("7777")?.name, "遠端新股");
+        assert.equal(remoteCalls(), 1);
+    });
+});

@@ -162,15 +162,18 @@ export function installFakeChrome(options: FakeChromeOptions = {}): FakeChromeCo
         },
         dispatch: (message, sender = { id }) =>
             new Promise((resolve) => {
+                // 與 Chrome 相同：任一 listener 回傳 true 就保留回應通道；以第一次 sendResponse 為準（Promise 只會 resolve 一次）
+                let keepOpen = false;
                 let responded = false;
                 for (const l of messageListeners) {
-                    const keepOpen = l(message, sender, (res: unknown) => {
+                    const result = l(message, sender, (res: unknown) => {
                         responded = true;
                         resolve(res);
                     });
-                    if (keepOpen !== true && !responded) resolve(undefined);
+                    if (result === true) keepOpen = true;
                 }
-                if (messageListeners.size === 0) resolve(undefined);
+                // 所有 listener 都沒有保留通道、也沒有同步回應：Chrome 會關閉通道，送出端收到 undefined
+                if (!keepOpen && !responded) resolve(undefined);
             }),
         fireInstalled: () => installedListeners.forEach((l) => l({ reason: "install" })),
         fireStartup: () => startupListeners.forEach((l) => l()),
