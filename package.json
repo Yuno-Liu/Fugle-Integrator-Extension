@@ -1,28 +1,29 @@
 {
     "name": "fugle-integrator",
-    "version": "1.0.0",
+    "version": "2.1.0",
+    "private": true,
     "type": "module",
     "description": "富果整合器",
+    "engines": {
+        "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+    },
     "scripts": {
-        "build": "npm run build:background && npm run build:content && npm run build:options && npm run copy:assets",
-        "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020",
-        "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020",
-        "build:options": "esbuild src/options.ts --bundle --outfile=dist/options.js --format=iife --target=es2020",
-        "copy:assets": "node -e \"const fs=require('fs'); if (!fs.existsSync('dist')) fs.mkdirSync('dist', { recursive: true }); fs.copyFileSync('manifest.json', 'dist/manifest.json'); fs.copyFileSync('stock-data.json', 'dist/stock-data.json'); fs.copyFileSync('options.html', 'dist/options.html');\"",
-        "watch": "npm run build && concurrently \"npm run watch:background\" \"npm run watch:content\" \"npm run watch:options\"",
-        "watch:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=iife --target=es2020 --watch",
-        "watch:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife --target=es2020 --watch",
-        "watch:options": "esbuild src/options.ts --bundle --outfile=dist/options.js --format=iife --target=es2020 --watch",
-        "clean": "rimraf dist dist-test",
-        "typecheck": "tsc --noEmit",
-        "build:test": "tsc -p tsconfig.test.json",
-        "test": "npm run build:test && node --test tests/*.test.mjs"
+        "build": "node scripts/build.mjs",
+        "build:dev": "node scripts/build.mjs --dev",
+        "watch": "node scripts/build.mjs --watch",
+        "clean": "node -e \"for (const d of ['dist', '.test-dist']) require('node:fs').rmSync(d, { recursive: true, force: true })\"",
+        "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+        "test": "node scripts/test.mjs",
+        "check": "npm run typecheck && npm test && npm run build",
+        "e2e": "node scripts/e2e.mjs"
     },
     "devDependencies": {
         "@types/chrome": "^0.0.287",
-        "concurrently": "^9.1.2",
+        "@types/jsdom": "^30.0.0",
+        "@types/node": "^24.0.0",
         "esbuild": "^0.27.4",
-        "rimraf": "^6.0.1",
+        "jsdom": "^30.1.3",
+        "playwright-core": "1.58.2",
         "typescript": "^5.7.2"
     },
     "keywords": [

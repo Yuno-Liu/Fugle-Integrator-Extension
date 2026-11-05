@@ -1,0 +1,6 @@
+/* 彈出視窗專用覆寫樣式 */
+html, body { margin: 0; padding: 0; background: var(--fi-bg); }
+body { min-height: 100vh; }
+#fi-card { margin: 0; border: 0; border-radius: 0; box-shadow: none; min-height: 100vh; overflow: visible; }
+#fi-card .fi-card__header { position: sticky; top: 0; }
+#fi-card .fi-section__header { position: sticky; top: var(--fi-header-h, 64px); z-index: 2; }

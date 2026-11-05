@@ -8,95 +8,127 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Release tag name (optional when manual run)"
-        required: false
+        description: "發布標籤，例如 v2.1.0（須與 package.json 的 version 相同）"
+        required: true
         type: string
 
-jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+# 預設只有讀取權限；只有最後建立 Release 的 job（不執行任何 npm 套件程式碼）才有寫入權限
+permissions:
+  contents: read
 
+jobs:
+  build:
+    name: Verify & build
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.config.outputs.release_tag }}
+      version: ${{ steps.config.outputs.version }}
+      # 實際建置的 commit；手動發布建立新標籤時必須指向它
+      sha: ${{ github.sha }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
 
-      - name: Determine Version
+      # 📌 使用者輸入一律經由環境變數傳入，避免直接展開到 shell 指令中
+      - name: Determine and validate version
         id: config
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag_name }}
         run: |
-          REF="${{ github.ref_name }}"
-          MANUAL_TAG="${{ inputs.tag_name }}"
-
-          if [ -n "$MANUAL_TAG" ]; then
-            TAG="$MANUAL_TAG"
-          elif [ -n "$REF" ]; then
-            TAG="$REF"
-          else
-            TAG="v$(date +'%Y%m%d%H%M%S')"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then TAG="$INPUT_TAG"; else TAG="$REF_NAME"; fi
+          if ! printf '%s' "$TAG" | grep -Eq '^(fugle-)?v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::標籤格式須為 v1.2.3（收到：'$TAG'）"
+            exit 1
           fi
-
+          VERSION="${TAG#fugle-}"
+          VERSION="${VERSION#v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::標籤版本 $VERSION 與 package.json 版本 $PKG_VERSION 不一致，請先更新 package.json"
+            exit 1
+          fi
           echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Run Unit Tests
+      - name: Unit & integration tests
         run: npm test
 
-      - name: Build Extension
+      - name: Build extension
         run: npm run build
 
-      - name: Package Extension
+      # zip 根目錄即為擴充功能資料夾（manifest.json 在最上層），解壓縮後可直接載入
+      - name: Package extension
+        env:
+          TAG: ${{ steps.config.outputs.release_tag }}
         run: |
-          TAG="${{ steps.config.outputs.release_tag }}"
           mkdir -p releases
-          zip -r releases/FugleIntegrator-$TAG.zip dist/ manifest.json stock-data.json options.html README.md
+          (cd dist && zip -r "../releases/FugleIntegrator-$TAG.zip" .)
+          unzip -l "releases/FugleIntegrator-$TAG.zip"
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: FugleIntegrator-${{ steps.config.outputs.release_tag }}
+          name: release-package
           path: releases/*.zip
+          if-no-files-found: error
 
-      - name: Generate Release Notes
+  release:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-package
+          path: releases
+
+      - name: Generate release notes
+        env:
+          TAG: ${{ needs.build.outputs.release_tag }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          TAG="${{ steps.config.outputs.release_tag }}"
-          cat << 'EOF' > release_body.md
-          ## 富果整合器 (Fugle Integrator) - $TAG
+          cat > release_body.md <<EOF
+          ## 富果整合器 (Fugle Integrator) v${VERSION}
 
           ### 📦 發布套件
-          - **FugleIntegrator-$TAG.zip** - 富果整合器 Chrome 擴充功能主套件
+          - **FugleIntegrator-${TAG}.zip**：Chrome 擴充功能（Manifest V3）
 
           ### 🚀 安裝說明
-          1. 下載 `FugleIntegrator-$TAG.zip`
-          2. 解壓縮檔案至本機資料夾
-          3. 開啟 Google Chrome 瀏覽器，進入 `chrome://extensions/`
-          4. 開啟右上角 **「開發人員模式」 (Developer mode)**
-          5. 點選 **「載入未封裝項目」 (Load unpacked)** 並選取解壓縮後的 `dist` 目錄
+          1. 下載 \`FugleIntegrator-${TAG}.zip\` 並解壓縮到任意資料夾
+          2. 開啟 Chrome，進入 \`chrome://extensions/\`
+          3. 開啟右上角的 **「開發人員模式」**
+          4. 點選 **「載入未封裝項目」**，選取剛剛解壓縮的資料夾（資料夾內可看到 \`manifest.json\`）
+
+          > 從舊版更新後，請重新整理已開啟的富果分頁。
 
           ---
           *由 GitHub Actions 自動建置發布*
           EOF
-          sed -i "s/\$TAG/$TAG/g" release_body.md
 
-      - name: Create or Update GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Create or update GitHub release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
-          tag_name: ${{ steps.config.outputs.release_tag }}
-          name: Release ${{ steps.config.outputs.release_tag }}
+          tag_name: ${{ needs.build.outputs.release_tag }}
+          target_commitish: ${{ needs.build.outputs.sha }}
+          name: Release ${{ needs.build.outputs.release_tag }}
           body_path: release_body.md
           files: releases/*.zip
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

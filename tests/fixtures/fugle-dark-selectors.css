@@ -1,0 +1,43 @@
+/*
+ * 擷取自 www.fugle.tw 的樣式表（2026-11-05），用來驗證整合器的深色模式偵測與富果實際使用的選擇器一致。
+ * - fugle-desktop.css：舊版樣式以 .body.dark-theme 為前綴（共 242 條規則）
+ * - chunk.*.css：Tailwind 的 dark: 變體為 :is(.tw-dark-theme *)
+ */
+.body.dark-theme .nps-box{background-color:var(--t60)}
+.body.dark-theme .score-slider__items{background-color:var(--t40)}
+.body.dark-theme .instructions-dialog .modal-body h2{color:#919191}
+.body.dark-theme .instructions-dialog .modal-body .sub-switcher button{color:var(--t10);background-color:var(--t60)}
+.body.dark-theme .instructions-dialog .segmented-ctrl{background-color:var(--t50)}
+.body.dark-theme .instructions-dialog__content-box{color:#919191}
+.dark\:tw-block:is(.tw-dark-theme *){
+
+    display: block;
+}
+.dark\:tw-hidden:is(.tw-dark-theme *){
+
+    display: none;
+}
+.dark\:tw-border-\[\#292929\]:is(.tw-dark-theme *){
+
+    --tw-border-opacity: 1;
+
+    border-color: rgb(41 41 41 / var(--tw-border-opacity, 1));
+}
+.dark\:tw-border-\[\#323232\]:is(.tw-dark-theme *){
+
+    --tw-border-opacity: 1;
+
+    border-color: rgb(50 50 50 / var(--tw-border-opacity, 1));
+}
+.dark\:tw-border-\[\#4D4D4D\]:is(.tw-dark-theme *){
+
+    --tw-border-opacity: 1;
+
+    border-color: rgb(77 77 77 / var(--tw-border-opacity, 1));
+}
+.dark\:tw-border-\[\#4a4a4a\]:is(.tw-dark-theme *){
+
+    --tw-border-opacity: 1;
+
+    border-color: rgb(74 74 74 / var(--tw-border-opacity, 1));
+}

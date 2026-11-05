@@ -1,6 +1,6 @@
 # 🔐 Node.js / npm
 node_modules/
-package-lock.json
+# package-lock.json 需提交：CI 使用 npm ci 與 setup-node 快取
 yarn.lock
 pnpm-lock.yaml
 .npm
@@ -101,3 +101,7 @@ ehthumbs.db
 extension_key.txt
 
 dist-test/
+.test-dist/
+
+# 🧪 端對端測試輸出
+.e2e-output/

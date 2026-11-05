@@ -5,82 +5,166 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>富果整合器設定</title>
         <style>
+            :root {
+                --bg: #f5f6f8;
+                --card: #ffffff;
+                --border: #e3e5e8;
+                --text: #1f2329;
+                --muted: #5c6370;
+                --primary: #4f46e5;
+                --primary-text: #ffffff;
+                --ok: #12813f;
+                --err: #c62828;
+                --input: #ffffff;
+                --focus: 0 0 0 3px rgba(79, 70, 229, 0.35);
+                color-scheme: light dark;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #17181b;
+                    --card: #212327;
+                    --border: #34373d;
+                    --text: #e6e8eb;
+                    --muted: #a3a9b2;
+                    --primary: #818cf8;
+                    --primary-text: #111111;
+                    --ok: #4ade80;
+                    --err: #ff8a80;
+                    --input: #17181b;
+                    --focus: 0 0 0 3px rgba(129, 140, 248, 0.45);
+                }
+            }
+            * { box-sizing: border-box; }
             body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                margin: 24px;
-                background: #1f1f1f;
-                color: #f5f5f5;
+                margin: 0;
+                background: var(--bg);
+                color: var(--text);
+                font: 14px/1.6 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Segoe UI", system-ui, sans-serif;
             }
-            .card {
-                max-width: 540px;
-                border: 1px solid #333;
-                border-radius: 12px;
-                padding: 20px;
-                background: #2b2b2b;
+            .wrap { max-width: 680px; margin: 0 auto; padding: 28px 16px 48px; }
+            h1 { margin: 0 0 4px; font-size: 22px; }
+            .lead { margin: 0 0 20px; color: var(--muted); }
+            .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+            h2 { margin: 0 0 10px; font-size: 16px; }
+            .field { margin: 12px 0 0; border: 0; padding: 0; }
+            fieldset.field { margin-top: 14px; }
+            legend, .label { display: block; font-weight: 600; margin-bottom: 6px; padding: 0; }
+            label { cursor: pointer; }
+            .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+            .input {
+                flex: 1;
+                min-width: 200px;
+                height: 38px;
+                padding: 0 12px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--input);
+                color: var(--text);
+                font: inherit;
             }
-            label {
-                display: block;
-                margin-bottom: 8px;
+            .key-input { font-weight: 700; letter-spacing: 0.5px; cursor: pointer; }
+            .key-input.recording { border-color: var(--primary); }
+            .input:focus, .btn:focus-visible, input[type="radio"]:focus-visible, input[type="checkbox"]:focus-visible { outline: none; box-shadow: var(--focus); }
+            .btn {
+                height: 38px;
+                padding: 0 14px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--card);
+                color: var(--text);
+                font: inherit;
                 font-weight: 600;
-            }
-            input {
-                width: 100%;
-                box-sizing: border-box;
-                border: 1px solid #444;
-                border-radius: 8px;
-                padding: 10px 12px;
-                background: #1b1b1b;
-                color: #fff;
-                font-size: 16px;
-            }
-            .actions {
-                margin-top: 12px;
-                display: flex;
-                gap: 8px;
-            }
-            button {
-                border: none;
-                border-radius: 8px;
-                padding: 10px 14px;
                 cursor: pointer;
-                font-weight: 600;
             }
-            #save-shortcut-btn {
-                background: #6366f1;
-                color: #fff;
-            }
-            #reset-shortcut-btn {
-                background: #3a3a3a;
-                color: #ddd;
-            }
-            #shortcut-status {
-                margin-top: 10px;
-                color: #9fd39f;
-                min-height: 20px;
-            }
-            .hint {
-                margin-top: 8px;
-                color: #b4b4b4;
-                font-size: 13px;
-                line-height: 1.4;
-            }
+            .btn:hover { border-color: var(--muted); }
+            .btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+            .radio, .check { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+            .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 12px; }
+            .hint { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+            .hint a { color: var(--primary); }
+            .status { margin: 6px 0 0; min-height: 20px; font-size: 13px; font-weight: 600; }
+            .status.ok { color: var(--ok); }
+            .status.err { color: var(--err); }
+            .foot { color: var(--muted); font-size: 12px; text-align: center; }
+            kbd { font: inherit; font-weight: 700; padding: 0 4px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; }
         </style>
     </head>
     <body>
-        <div class="card">
-            <h1>⌨️ 快速定位設定</h1>
-            <p>快速定位到 <code>id="ember14"</code> 輸入框。預設快捷鍵：<strong>Alt+Q</strong></p>
+        <main class="wrap">
+            <h1>富果整合器設定</h1>
+            <p class="lead">設定會自動儲存，並立即套用到已開啟的富果頁面。</p>
 
-            <label for="shortcut-input">自訂快捷鍵</label>
-            <input id="shortcut-input" type="text" placeholder="點這裡後按下組合鍵，例如 Alt+Q" />
-            <div class="actions">
-                <button id="save-shortcut-btn">儲存</button>
-                <button id="reset-shortcut-btn">重設為 Alt+Q</button>
-            </div>
-            <div id="shortcut-status"></div>
-            <div class="hint">請至少包含一個修飾鍵（Ctrl / Alt / Shift / Meta）。</div>
-        </div>
+            <section class="card" aria-labelledby="sec-shortcut">
+                <h2 id="sec-shortcut">⌨️ 快速定位快捷鍵</h2>
+                <p class="hint">在富果任一頁面按下快捷鍵，游標會跳到頁首的股票搜尋框（找不到時改開啟整合器搜尋）。</p>
+                <div class="field">
+                    <label class="label" for="shortcut-input">快捷鍵</label>
+                    <div class="row">
+                        <input id="shortcut-input" class="input key-input" type="text" readonly aria-describedby="shortcut-help" />
+                        <button id="reset-shortcut" class="btn" type="button">重設為 Alt+Q</button>
+                    </div>
+                    <p id="shortcut-help" class="hint">點選欄位後直接按下組合鍵（需包含 <kbd>Ctrl</kbd>、<kbd>Alt</kbd> 或 <kbd>⌘</kbd>）。按 <kbd>Tab</kbd> 離開欄位、<kbd>Esc</kbd> 取消。</p>
+                    <p id="shortcut-status" class="status" role="status" aria-live="polite"></p>
+                </div>
+            </section>
 
+            <section class="card" aria-labelledby="sec-card">
+                <h2 id="sec-card">📋 資訊卡</h2>
+                <fieldset class="field">
+                    <legend>位置</legend>
+                    <label class="radio"><input type="radio" name="position" value="right" /> 靠右（浮動於畫面右側）</label>
+                    <label class="radio"><input type="radio" name="position" value="left" /> 靠左（浮動於畫面左側）</label>
+                    <label class="radio"><input type="radio" name="position" value="default" /> 嵌入頁面（隨頁面捲動）</label>
+                </fieldset>
+                <fieldset class="field">
+                    <legend>主題</legend>
+                    <label class="radio"><input type="radio" name="theme" value="auto" /> 自動（跟隨富果的淺色 / 深色模式）</label>
+                    <label class="radio"><input type="radio" name="theme" value="light" /> 淺色</label>
+                    <label class="radio"><input type="radio" name="theme" value="dark" /> 深色</label>
+                </fieldset>
+                <div class="field">
+                    <span class="label">顯示</span>
+                    <label class="check"><input type="checkbox" id="visible" /> 顯示資訊卡</label>
+                    <label class="check"><input type="checkbox" id="collapsed" /> 收合資訊卡（只顯示標題與重點摘要）</label>
+                </div>
+                <div class="field">
+                    <button id="reset-sections" class="btn" type="button">重設各區塊的展開 / 收合狀態</button>
+                </div>
+                <p id="card-status" class="status" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="card" aria-labelledby="sec-links">
+                <h2 id="sec-links">🔗 工具列外部連結</h2>
+                <p class="hint">取消勾選即可在工具列隱藏該按鈕。</p>
+                <div id="links" class="grid field"></div>
+                <p id="links-status" class="status" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="card" aria-labelledby="sec-data">
+                <h2 id="sec-data">🗄️ 資料來源</h2>
+                <div class="field">
+                    <label class="label" for="token-input">FinMind API Token（選填）</label>
+                    <div class="row">
+                        <input id="token-input" class="input" type="password" autocomplete="off" spellcheck="false" placeholder="未設定" />
+                        <button id="toggle-token" class="btn" type="button" aria-pressed="false">顯示</button>
+                        <button id="save-token" class="btn primary" type="button">儲存</button>
+                        <button id="clear-token" class="btn" type="button">清除</button>
+                    </div>
+                    <p class="hint">
+                        主力買賣占比預設使用玉山證券資料中的區間成交量，<strong>不需要 Token</strong>。只有在該欄位缺漏時，才會以
+                        <a href="https://finmindtrade.com/" target="_blank" rel="noopener noreferrer">FinMind</a> 每日成交量作為備援；設定 Token 可提高備援請求額度。Token 只儲存在本機擴充功能中，不會提供給富果網站。
+                    </p>
+                    <p id="token-status" class="status" role="status" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                    <button id="clear-cache" class="btn" type="button">清除資料快取</button>
+                    <p class="hint">為了加快載入，資料會快取一段時間（籌碼資料 20 分鐘、財務指標 6 小時、公司資料 12 小時）。若資料看起來過舊，可清除快取，或在資訊卡按「⟳ 重新整理」。</p>
+                    <p id="cache-status" class="status" role="status" aria-live="polite"></p>
+                </div>
+            </section>
+
+            <p class="foot">富果整合器 v<span id="version"></span></p>
+        </main>
         <script src="options.js"></script>
     </body>
 </html>

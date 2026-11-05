@@ -1,0 +1,18 @@
+{
+ "ResultSet": {
+  "TAGID": "stock-basic0006-3",
+  "StatusCode": 0,
+  "Comment": "個股所屬集團股(集團股ID,集團股名稱)",
+  "ExpireTime": "2026/11/05 06:00:00",
+  "DataLength": 1,
+  "FieldLength": 4,
+  "Result": [
+   {
+    "V1": "EG00080",
+    "V2": "台積電集團",
+    "V3": "G04420",
+    "V4": "G14EG00080"
+   }
+  ]
+ }
+}
