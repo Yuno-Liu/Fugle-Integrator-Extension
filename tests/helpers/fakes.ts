@@ -89,17 +89,21 @@ export function createFetch(routes: Array<[string | RegExp | ((url: string) => b
         if (reply.delayMs) {
             await new Promise<void>((resolve, reject) => {
                 const signal = init?.signal;
+                let timer: ReturnType<typeof setTimeout> | undefined;
                 const onAbort = (): void => {
                     clearTimeout(timer);
                     reject(new DOMException("The operation was aborted.", "AbortError"));
                 };
-                const timer = setTimeout(() => {
+                // 與真實 fetch 相同：已中止的 signal 立即拒絕
+                if (signal?.aborted) {
+                    onAbort();
+                    return;
+                }
+                signal?.addEventListener("abort", onAbort, { once: true });
+                timer = setTimeout(() => {
                     signal?.removeEventListener("abort", onAbort);
                     resolve();
                 }, reply.delayMs);
-                // 與真實 fetch 相同：已中止的 signal 立即拒絕
-                if (signal?.aborted) onAbort();
-                else signal?.addEventListener("abort", onAbort, { once: true });
             });
         }
         if (reply.error) throw reply.error;
