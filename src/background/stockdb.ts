@@ -108,8 +108,7 @@ export class StockDbService {
                     if (res.redirected && new URL(res.url).hostname !== new URL(this.deps.remoteUrl).hostname) return;
                     const text = await res.text();
                     this.build(text); // 驗證失敗會拋錯，不會寫入快取
-                    const store = this.deps.caches ? await this.deps.caches.open(this.deps.cacheName) : null;
-                    await store?.put(this.deps.remoteUrl, new Response(text, { headers: { "content-type": "application/json", [AT_HEADER]: String(this.deps.now()) } }));
+                    await this.writeCachedRemote(text);
                 } catch {
                     // 遠端更新失敗不影響目前使用的版本
                 } finally {
@@ -119,6 +118,20 @@ export class StockDbService {
             })();
         }
         return awaitResult ? this.refreshing : Promise.resolve();
+    }
+
+    /**
+     * 寫入快取供下次使用。Cache Storage 卡住時不再等待（寫入仍可能在背景完成），
+     * 否則 refreshing 不會被清除，之後的更新、以及內建版失敗時的載入都會一直等待。
+     */
+    private async writeCachedRemote(text: string): Promise<void> {
+        if (!this.deps.caches) return;
+        const limit = this.deps.persistTimeoutMs ?? PERSIST_TIMEOUT_MS;
+        const store = await settleWithin(this.deps.caches.open(this.deps.cacheName), limit);
+        if (!store) return;
+        const res = new Response(text, { headers: { "content-type": "application/json", [AT_HEADER]: String(this.deps.now()) } });
+        // 約 2MB，與讀取相同給較寬裕的時間
+        await settleWithin(store.put(this.deps.remoteUrl, res), limit * 5);
     }
 
     /** 讀取快取的遠端版本；Cache Storage 卡住時直接放棄（改用內建版本），不阻塞查詢 */
